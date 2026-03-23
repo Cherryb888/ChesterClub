@@ -17,7 +17,7 @@ const MEAL_ICONS: Record<string, string> = {
 
 export default function LogScreen() {
   const [log, setLog] = useState<DailyLog | null>(null);
-  const [goals, setGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65 });
+  const [goals, setGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
   const router = useRouter();
 
   const loadLog = useCallback(async () => {

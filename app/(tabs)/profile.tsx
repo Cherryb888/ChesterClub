@@ -10,7 +10,7 @@ import { UserProfile, UserGoals } from '../../types';
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editing, setEditing] = useState(false);
-  const [editGoals, setEditGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65 });
+  const [editGoals, setEditGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
   const [editName, setEditName] = useState('');
 
   useFocusEffect(useCallback(() => {
@@ -85,6 +85,10 @@ export default function ProfileScreen() {
             icon="water" label="Fat" value={editGoals.dailyFat} unit="g" color={Colors.fat}
             editing={editing} onChange={(v) => setEditGoals({ ...editGoals, dailyFat: v })}
           />
+          <GoalRow
+            icon="water" label="Water" value={editGoals.dailyWaterGlasses} unit="glasses" color="#4FC3F7"
+            editing={editing} onChange={(v) => setEditGoals({ ...editGoals, dailyWaterGlasses: v })}
+          />
         </View>
 
         {/* Chester Info */}
@@ -95,6 +99,7 @@ export default function ProfileScreen() {
             <StatItem label="XP" value={`${profile.chester.xp}/${profile.chester.level * 100}`} />
             <StatItem label="Streak" value={`${profile.chester.streak} days`} />
             <StatItem label="Mood" value={profile.chester.mood} />
+            <StatItem label="Coins" value={`🪙 ${profile.chester.coins}`} />
           </View>
         </View>
 
