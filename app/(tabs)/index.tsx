@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import ChesterAvatar from '../../components/Chester/ChesterAvatar';
 import ChesterReaction from '../../components/Chester/ChesterReaction';
-import { getProfile, getDailyLog, getTodayKey } from '../../services/storage';
+import { getProfile, getDailyLog, getTodayKey, checkChesterDecay } from '../../services/storage';
 import { ChesterState, DailyLog, UserGoals } from '../../types';
 
 const GREETINGS = [
@@ -20,13 +20,15 @@ const GREETINGS = [
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default' });
+  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [] });
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
   const [goals, setGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65 });
   const [refreshing, setRefreshing] = useState(false);
   const [greeting] = useState(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
 
   const loadData = useCallback(async () => {
+    // Check if Chester should decay from missed days
+    await checkChesterDecay();
     const profile = await getProfile();
     setChester(profile.chester);
     setGoals(profile.goals);
@@ -52,7 +54,15 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {/* Header */}
-        <Text style={styles.header}>ChesterClub</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/dashboard')}>
+            <Ionicons name="stats-chart" size={24} color={Colors.textSecondary} />
+          </TouchableOpacity>
+          <Text style={styles.header}>ChesterClub</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+            <Ionicons name="person-circle" size={28} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
         {/* Chester */}
         <View style={styles.chesterSection}>
@@ -123,12 +133,17 @@ function MacroStat({ label, value, goal, color, unit }: { label: string; value: 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
   header: {
     fontSize: FontSize.xxl,
     fontWeight: '800',
     color: Colors.primary,
     textAlign: 'center',
-    marginBottom: Spacing.md,
   },
   chesterSection: {
     alignItems: 'center',

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
-import { ChesterState } from '../../types';
+import { ChesterState, ChesterLifeStage } from '../../types';
+import { getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
 
 interface Props {
   chester: ChesterState;
@@ -15,6 +16,7 @@ const MOOD_FACES: Record<ChesterState['mood'], string> = {
   neutral: '(-.-)',
   hungry: '(o.o)',
   sleepy: '(u.u)',
+  sad: '(T.T)',
 };
 
 const MOOD_LABELS: Record<ChesterState['mood'], string> = {
@@ -23,6 +25,7 @@ const MOOD_LABELS: Record<ChesterState['mood'], string> = {
   neutral: 'Chillin',
   hungry: 'Hungry...',
   sleepy: 'Sleepy',
+  sad: 'Needs you...',
 };
 
 export default function ChesterAvatar({ chester, size = 'medium', showInfo = true }: Props) {
@@ -30,26 +33,79 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
   const fontSize = { small: 24, medium: 40, large: 56 }[size];
   const earSize = { small: 16, medium: 28, large: 36 }[size];
 
+  const stage = getChesterLifeStage(chester.level);
+  const stageInfo = LIFE_STAGE_INFO[stage];
+
+  // Border color changes with life stage
+  const borderColor = stage === 'golden' ? '#FFD700' : stage === 'champion' ? '#FFD700' : Colors.primary;
+  // Golden aura for max stage
+  const glowColor = stage === 'golden' ? 'rgba(255, 215, 0, 0.4)' : stage === 'champion' ? 'rgba(255, 215, 0, 0.2)' : 'transparent';
+
+  // Health affects ear droop for sad chester
+  const earDroop = chester.mood === 'sad' || chester.mood === 'hungry';
+
   return (
     <View style={styles.container}>
+      {/* Golden aura for champion/golden stages */}
+      {(stage === 'golden' || stage === 'champion') && (
+        <View style={[styles.aura, { width: dimensions + 24, height: dimensions + 24, backgroundColor: glowColor }]} />
+      )}
+
       {/* Dog body */}
       <View style={[styles.dogBody, { width: dimensions, height: dimensions }]}>
         {/* Ears */}
-        <View style={[styles.ear, styles.leftEar, { width: earSize, height: earSize * 1.5, left: dimensions * 0.1 }]} />
-        <View style={[styles.ear, styles.rightEar, { width: earSize, height: earSize * 1.5, right: dimensions * 0.1 }]} />
+        <View style={[
+          styles.ear,
+          styles.leftEar,
+          { width: earSize, height: earSize * 1.5, left: dimensions * 0.1 },
+          earDroop && { transform: [{ rotate: '-40deg' }], top: 5 },
+        ]} />
+        <View style={[
+          styles.ear,
+          styles.rightEar,
+          { width: earSize, height: earSize * 1.5, right: dimensions * 0.1 },
+          earDroop && { transform: [{ rotate: '40deg' }], top: 5 },
+        ]} />
 
         {/* Face */}
-        <View style={[styles.face, { width: dimensions * 0.85, height: dimensions * 0.85 }]}>
+        <View style={[styles.face, {
+          width: dimensions * 0.85,
+          height: dimensions * 0.85,
+          borderColor,
+          borderWidth: stage === 'golden' ? 4 : 3,
+        }]}>
           <Text style={[styles.faceText, { fontSize }]}>
-            {chester.mood === 'excited' ? '🐕' : '🐶'}
+            {stageInfo.emoji.split(/\s/)[stage === 'champion' || stage === 'golden' ? 1 : 0] || stageInfo.emoji}
           </Text>
+          {/* Crown for golden chester */}
+          {stage === 'golden' && size !== 'small' && (
+            <Text style={styles.crown}>👑</Text>
+          )}
+          {/* Medal for champion */}
+          {stage === 'champion' && size !== 'small' && (
+            <Text style={styles.medal}>🏅</Text>
+          )}
         </View>
       </View>
 
       {showInfo && (
         <View style={styles.info}>
           <Text style={styles.name}>Chester</Text>
+          <Text style={[styles.stageBadge, { color: stageInfo.color }]}>{stageInfo.name}</Text>
           <Text style={styles.mood}>{MOOD_LABELS[chester.mood]}</Text>
+
+          {/* Health bar */}
+          <View style={styles.healthRow}>
+            <Text style={styles.healthLabel}>❤️</Text>
+            <View style={styles.healthBar}>
+              <View style={[styles.healthFill, {
+                width: `${chester.health}%`,
+                backgroundColor: chester.health > 60 ? Colors.success : chester.health > 30 ? Colors.warning : Colors.error,
+              }]} />
+            </View>
+          </View>
+
+          {/* XP and level */}
           <View style={styles.levelRow}>
             <Text style={styles.level}>Lv.{chester.level}</Text>
             <View style={styles.xpBar}>
@@ -57,7 +113,10 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
             </View>
           </View>
           {chester.streak > 0 && (
-            <Text style={styles.streak}>{chester.streak} day streak! 🔥</Text>
+            <Text style={styles.streak}>
+              {chester.streak} day streak! 🔥
+              {chester.streak >= 7 ? ` (${getStreakMultiplier(chester.streak)}x XP)` : ''}
+            </Text>
           )}
         </View>
       )}
@@ -65,9 +124,21 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
   );
 }
 
+function getStreakMultiplier(streak: number): number {
+  if (streak >= 60) return 5;
+  if (streak >= 30) return 3;
+  if (streak >= 7) return 2;
+  return 1;
+}
+
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
+  },
+  aura: {
+    position: 'absolute',
+    borderRadius: 999,
+    top: -12,
   },
   dogBody: {
     justifyContent: 'center',
@@ -103,6 +174,16 @@ const styles = StyleSheet.create({
   faceText: {
     textAlign: 'center',
   },
+  crown: {
+    position: 'absolute',
+    top: -20,
+    fontSize: 24,
+  },
+  medal: {
+    position: 'absolute',
+    bottom: -8,
+    fontSize: 20,
+  },
   info: {
     alignItems: 'center',
     marginTop: Spacing.sm,
@@ -112,10 +193,35 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
   },
+  stageBadge: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    marginTop: 2,
+  },
   mood: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  healthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+    gap: 4,
+  },
+  healthLabel: {
+    fontSize: 12,
+  },
+  healthBar: {
+    width: 80,
+    height: 6,
+    backgroundColor: Colors.border,
+    borderRadius: BorderRadius.full,
+    overflow: 'hidden',
+  },
+  healthFill: {
+    height: '100%',
+    borderRadius: BorderRadius.full,
   },
   levelRow: {
     flexDirection: 'row',

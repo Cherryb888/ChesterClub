@@ -61,22 +61,31 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="dashboard"
+        name="meal-plan"
         options={{
-          title: 'Stats',
+          title: 'Meals',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="stats-chart" size={size} color={color} />
+            <Ionicons name="restaurant" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="calendar"
         options={{
-          title: 'Profile',
+          title: 'Calendar',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Ionicons name="calendar" size={size} color={color} />
           ),
         }}
+      />
+      {/* Stats & Profile accessible from Home header icons */}
+      <Tabs.Screen
+        name="dashboard"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{ href: null }}
       />
     </Tabs>
   );
