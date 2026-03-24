@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -7,21 +7,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { analyzeFoodImage, analyzeTextFood } from '../../services/gemini';
+import { lookupBarcode } from '../../services/openfoodfacts';
 import { addFoodToLog, feedChester, addRecentFood, getTodayKey } from '../../services/storage';
 import ChesterReaction from '../../components/Chester/ChesterReaction';
 import { FoodItem, GeminiFoodResult } from '../../types';
 
 type Mode = 'camera' | 'preview' | 'result' | 'text';
+type ScanType = 'meal' | 'label';
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [mode, setMode] = useState<Mode>('camera');
+  const [scanType, setScanType] = useState<ScanType>('meal');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GeminiFoodResult | null>(null);
   const [textInput, setTextInput] = useState('');
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
+  const tabIndicator = useRef(new Animated.Value(0)).current;
 
   // Camera permission
   if (!permission) return <View style={styles.container} />;
@@ -39,6 +44,15 @@ export default function ScannerScreen() {
       </SafeAreaView>
     );
   }
+
+  const switchScanType = (type: ScanType) => {
+    setScanType(type);
+    setScannedBarcode(null);
+    Animated.spring(tabIndicator, {
+      toValue: type === 'meal' ? 0 : 1,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const takePhoto = async () => {
     if (!cameraRef.current) return;
@@ -77,6 +91,32 @@ export default function ScannerScreen() {
     }
   };
 
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    // Prevent scanning the same barcode repeatedly
+    if (scannedBarcode === data || loading) return;
+    setScannedBarcode(data);
+    setLoading(true);
+
+    try {
+      const foodResult = await lookupBarcode(data);
+      if (foodResult) {
+        setResult(foodResult);
+        setMode('result');
+      } else {
+        Alert.alert(
+          'Product Not Found',
+          `Chester couldn't find barcode ${data} in the database. Try scanning the food with "Meal" mode instead!`,
+          [{ text: 'Switch to Meal', onPress: () => switchScanType('meal') }, { text: 'Try Again', onPress: () => setScannedBarcode(null) }]
+        );
+      }
+    } catch {
+      Alert.alert('Scan Error', 'Something went wrong looking up that barcode. Try again!');
+      setScannedBarcode(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const analyzeText = async () => {
     if (!textInput.trim()) return;
     setLoading(true);
@@ -105,7 +145,7 @@ export default function ScannerScreen() {
         imageUri: imageUri || undefined,
         timestamp: Date.now(),
         mealType: getMealType(),
-        source: imageUri ? 'ai_scan' : 'text_search',
+        source: scanType === 'label' ? 'text_search' : (imageUri ? 'ai_scan' : 'text_search'),
       };
       await addFoodToLog(item);
       await addRecentFood(item);
@@ -121,6 +161,7 @@ export default function ScannerScreen() {
     setImageUri(null);
     setResult(null);
     setTextInput('');
+    setScannedBarcode(null);
   };
 
   const getMealType = (): FoodItem['mealType'] => {
@@ -135,29 +176,87 @@ export default function ScannerScreen() {
   if (mode === 'camera') {
     return (
       <View style={styles.cameraContainer}>
-        <CameraView ref={cameraRef} style={styles.camera} facing="back">
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing="back"
+          barcodeScannerSettings={scanType === 'label' ? {
+            barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'qr'],
+          } : undefined}
+          onBarcodeScanned={scanType === 'label' ? handleBarcodeScanned : undefined}
+        >
           <SafeAreaView style={styles.cameraOverlay}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Scan Your Food</Text>
-              <TouchableOpacity onPress={() => setMode('text')} style={styles.textModeBtn}>
-                <Ionicons name="text" size={20} color="#fff" />
-                <Text style={styles.textModeBtnText}>Type</Text>
-              </TouchableOpacity>
+            {/* Scan type tabs */}
+            <View style={styles.scanTabsContainer}>
+              <View style={styles.scanTabs}>
+                <TouchableOpacity
+                  style={[styles.scanTab, scanType === 'meal' && styles.scanTabActive]}
+                  onPress={() => switchScanType('meal')}
+                >
+                  <Ionicons name="restaurant" size={18} color={scanType === 'meal' ? '#fff' : 'rgba(255,255,255,0.6)'} />
+                  <Text style={[styles.scanTabText, scanType === 'meal' && styles.scanTabTextActive]}>Meal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.scanTab, scanType === 'label' && styles.scanTabActive]}
+                  onPress={() => switchScanType('label')}
+                >
+                  <Ionicons name="barcode" size={18} color={scanType === 'label' ? '#fff' : 'rgba(255,255,255,0.6)'} />
+                  <Text style={[styles.scanTabText, scanType === 'label' && styles.scanTabTextActive]}>Label</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Text mode button (only for meal scan) */}
+              {scanType === 'meal' && (
+                <TouchableOpacity onPress={() => setMode('text')} style={styles.textModeBtn}>
+                  <Ionicons name="text" size={18} color="#fff" />
+                  <Text style={styles.textModeBtnText}>Type</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={styles.scanFrame}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
+
+            {/* Scan frame */}
+            <View style={styles.scanFrameArea}>
+              {scanType === 'meal' ? (
+                <>
+                  <View style={styles.scanFrame}>
+                    <View style={[styles.corner, styles.topLeft]} />
+                    <View style={[styles.corner, styles.topRight]} />
+                    <View style={[styles.corner, styles.bottomLeft]} />
+                    <View style={[styles.corner, styles.bottomRight]} />
+                  </View>
+                  <Text style={styles.scanHint}>Point at your food</Text>
+                </>
+              ) : (
+                <>
+                  <View style={styles.barcodeFrame}>
+                    <View style={styles.barcodeLine} />
+                  </View>
+                  <Text style={styles.scanHint}>
+                    {loading ? 'Looking up product...' : 'Point at a barcode'}
+                  </Text>
+                  {loading && <ActivityIndicator color={Colors.primary} style={{ marginTop: 12 }} />}
+                </>
+              )}
             </View>
+
+            {/* Controls */}
             <View style={styles.cameraControls}>
-              <TouchableOpacity style={styles.galleryBtn} onPress={pickImage}>
-                <Ionicons name="images" size={28} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.captureBtn} onPress={takePhoto}>
-                <View style={styles.captureBtnInner} />
-              </TouchableOpacity>
-              <View style={{ width: 50 }} />
+              {scanType === 'meal' ? (
+                <>
+                  <TouchableOpacity style={styles.galleryBtn} onPress={pickImage}>
+                    <Ionicons name="images" size={28} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.captureBtn} onPress={takePhoto}>
+                    <View style={styles.captureBtnInner} />
+                  </TouchableOpacity>
+                  <View style={{ width: 50 }} />
+                </>
+              ) : (
+                <View style={styles.labelHint}>
+                  <Ionicons name="scan" size={20} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.labelHintText}>Barcode scans automatically</Text>
+                </View>
+              )}
             </View>
           </SafeAreaView>
         </CameraView>
@@ -227,7 +326,9 @@ export default function ScannerScreen() {
           <TouchableOpacity onPress={resetScanner}>
             <Ionicons name="arrow-back" size={24} color={Colors.text} />
           </TouchableOpacity>
-          <Text style={styles.resultTitle}>Scan Results</Text>
+          <Text style={styles.resultTitle}>
+            {scanType === 'label' ? 'Product Found' : 'Scan Results'}
+          </Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -292,20 +393,67 @@ const styles = StyleSheet.create({
   cameraContainer: { flex: 1 },
   camera: { flex: 1 },
   cameraOverlay: { flex: 1, justifyContent: 'space-between' },
-  cameraHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg },
-  cameraTitle: { fontSize: FontSize.lg, fontWeight: '700', color: '#fff', textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
+
+  // Scan type tabs
+  scanTabsContainer: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm,
+  },
+  scanTabs: {
+    flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: BorderRadius.full, padding: 3,
+  },
+  scanTab: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 18, paddingVertical: 10, borderRadius: BorderRadius.full,
+  },
+  scanTabActive: {
+    backgroundColor: Colors.primary,
+  },
+  scanTabText: {
+    color: 'rgba(255,255,255,0.6)', fontWeight: '600', fontSize: FontSize.sm,
+  },
+  scanTabTextActive: { color: '#fff' },
+
   textModeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full },
-  textModeBtnText: { color: '#fff', fontWeight: '600' },
-  scanFrame: { width: 260, height: 260, alignSelf: 'center' },
+  textModeBtnText: { color: '#fff', fontWeight: '600', fontSize: FontSize.sm },
+
+  // Scan frames
+  scanFrameArea: { alignItems: 'center', justifyContent: 'center' },
+  scanFrame: { width: 260, height: 260 },
   corner: { position: 'absolute', width: 40, height: 40, borderColor: Colors.primary, borderWidth: 3 },
   topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 12 },
   topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 12 },
   bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 12 },
   bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 12 },
+  scanHint: {
+    color: '#fff', fontSize: FontSize.sm, fontWeight: '600', marginTop: Spacing.md,
+    textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4,
+  },
+
+  // Barcode frame
+  barcodeFrame: {
+    width: 280, height: 160, borderWidth: 2, borderColor: Colors.primary,
+    borderRadius: BorderRadius.md, justifyContent: 'center', overflow: 'hidden',
+  },
+  barcodeLine: {
+    height: 2, backgroundColor: Colors.primary, width: '100%',
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1, shadowRadius: 8,
+  },
+
+  // Camera controls
   cameraControls: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingBottom: Spacing.xl, paddingHorizontal: Spacing.xl },
   galleryBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   captureBtn: { width: 76, height: 76, borderRadius: 38, borderWidth: 4, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
   captureBtnInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#fff' },
+  labelHint: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.full,
+  },
+  labelHintText: { color: 'rgba(255,255,255,0.7)', fontSize: FontSize.sm, fontWeight: '500' },
+
   // Text mode
   textContainer: { flex: 1, padding: Spacing.lg },
   textHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
