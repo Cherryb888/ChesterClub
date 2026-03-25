@@ -41,6 +41,7 @@ export interface ChesterState {
   health: number; // 0-100 health bar
   achievements: string[];
   coins: number;
+  previousStreak: number;
 }
 
 export interface UserProfile {
