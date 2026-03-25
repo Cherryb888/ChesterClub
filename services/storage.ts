@@ -30,6 +30,7 @@ const DEFAULT_CHESTER: ChesterState = {
   health: 70,
   achievements: [],
   coins: 0,
+  previousStreak: 0,
 };
 
 export async function getProfile(): Promise<UserProfile> {
@@ -42,6 +43,7 @@ export async function getProfile(): Promise<UserProfile> {
     if (profile.chester.coins === undefined) profile.chester.coins = 0;
     if (profile.goals.dailyWaterGlasses === undefined) profile.goals.dailyWaterGlasses = 8;
     if (profile.isPremiumMax === undefined) profile.isPremiumMax = false;
+    if (profile.chester.previousStreak === undefined) profile.chester.previousStreak = 0;
     return profile;
   }
   const profile: UserProfile = {
@@ -123,7 +125,13 @@ export async function feedChester(foodScore: string): Promise<ChesterState> {
   // Update streak
   if (chester.lastFedDate !== today) {
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    chester.streak = chester.lastFedDate === yesterday ? chester.streak + 1 : 1;
+    if (chester.lastFedDate === yesterday) {
+      chester.streak = chester.streak + 1;
+      chester.previousStreak = 0;
+    } else {
+      chester.previousStreak = chester.streak;
+      chester.streak = 1;
+    }
     chester.lastFedDate = today;
   }
 
@@ -185,12 +193,67 @@ export async function checkChesterDecay(): Promise<ChesterState> {
       const healthLoss = (daysSince - 1) * 10;
       chester.health = Math.max(0, chester.health - healthLoss);
       chester.mood = chester.health < 30 ? 'sad' : 'hungry';
+      if (chester.streak > 0) {
+        chester.previousStreak = chester.streak;
+        chester.streak = 0;
+      }
     }
   }
 
   profile.chester = chester;
   await saveProfile(profile);
   return chester;
+}
+
+// ─── Streak Recovery ───
+
+export function getStreakRecoveryCost(streak: number): number {
+  if (streak > 90) return 500;
+  if (streak > 60) return 300;
+  if (streak > 30) return 150;
+  if (streak > 7) return 75;
+  return 25;
+}
+
+export async function checkStreakRecoveryAvailable(): Promise<{ available: boolean; previousStreak: number; cost: number; coins: number } | null> {
+  const profile = await getProfile();
+  const chester = profile.chester;
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+  if (chester.previousStreak > 0 && chester.lastFedDate !== today && chester.lastFedDate !== yesterday) {
+    return {
+      available: true,
+      previousStreak: chester.previousStreak,
+      cost: getStreakRecoveryCost(chester.previousStreak),
+      coins: chester.coins,
+    };
+  }
+  return null;
+}
+
+export async function recoverStreak(): Promise<{ success: boolean; newStreak: number; cost: number }> {
+  const profile = await getProfile();
+  const chester = profile.chester;
+  const cost = getStreakRecoveryCost(chester.previousStreak);
+
+  if (chester.previousStreak <= 0 || chester.coins < cost) {
+    return { success: false, newStreak: chester.streak, cost };
+  }
+
+  chester.coins -= cost;
+  chester.streak = chester.previousStreak;
+  chester.lastFedDate = new Date(Date.now() - 86400000).toISOString().split('T')[0]; // yesterday
+  chester.previousStreak = 0;
+  profile.chester = chester;
+  await saveProfile(profile);
+  return { success: true, newStreak: chester.streak, cost };
+}
+
+export async function dismissStreakRecovery(): Promise<void> {
+  const profile = await getProfile();
+  profile.chester.previousStreak = 0;
+  await saveProfile(profile);
 }
 
 // ─── Water Tracking ───
