@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
-  Dimensions, FlatList, Alert,
+  Dimensions, FlatList, Alert, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,6 +16,7 @@ import {
   getMealPlan, calculateNutritionScore,
   getChallengesState, refreshChallengeProgress, claimChallengeReward,
   DAILY_CHALLENGES, WEEKLY_CHALLENGES, MONTHLY_CHALLENGES, ALL_TIME_CHALLENGES,
+  checkStreakRecoveryAvailable, recoverStreak, dismissStreakRecovery,
 } from '../../services/storage';
 import { ChesterState, DailyLog, UserGoals, WaterLog, MealPlan, ChallengesState, Challenge, ChallengeProgress } from '../../types';
 
@@ -44,6 +45,8 @@ export default function HomeScreen() {
   const [greeting] = useState(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
   const [challengeTab, setChallengeTab] = useState<'daily' | 'weekly' | 'monthly' | 'all_time'>('daily');
   const [isPremium, setIsPremium] = useState(false);
+  const [streakRecovery, setStreakRecovery] = useState<{ available: boolean; previousStreak: number; cost: number; coins: number } | null>(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
   const loadData = useCallback(async () => {
     await checkChesterDecay();
@@ -62,6 +65,13 @@ export default function HomeScreen() {
     await refreshChallengeProgress();
     const challenges = await getChallengesState();
     setChallengesState(challenges);
+
+    // Check streak recovery
+    const recovery = await checkStreakRecoveryAvailable();
+    if (recovery) {
+      setStreakRecovery(recovery);
+      setShowRecoveryModal(true);
+    }
   }, []);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
@@ -85,6 +95,24 @@ export default function HomeScreen() {
   const handleRemoveWater = async () => {
     const updated = await removeWaterGlass();
     setWaterLog(updated);
+  };
+
+  const handleRecoverStreak = async () => {
+    const result = await recoverStreak();
+    if (result.success) {
+      Alert.alert('Streak Recovered!', `Your ${result.newStreak}-day streak is back! Cost: ${result.cost} coins`);
+      setShowRecoveryModal(false);
+      setStreakRecovery(null);
+      await loadData();
+    } else {
+      Alert.alert('Not Enough Coins', 'You need more coins to recover your streak. Complete challenges to earn coins!');
+    }
+  };
+
+  const handleDismissRecovery = async () => {
+    await dismissStreakRecovery();
+    setShowRecoveryModal(false);
+    setStreakRecovery(null);
   };
 
   const handleClaimReward = async (challengeId: string) => {
@@ -437,6 +465,43 @@ export default function HomeScreen() {
           setCurrentPage(idx);
         }}
       />
+
+      {/* Streak Recovery Modal */}
+      <Modal visible={showRecoveryModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalEmoji}>😢🐕</Text>
+            <Text style={styles.modalTitle}>Oh no! Streak Lost!</Text>
+            <Text style={styles.modalText}>
+              Chester misses your {streakRecovery?.previousStreak}-day streak!
+            </Text>
+            <View style={styles.modalStreakDisplay}>
+              <Text style={styles.modalStreakNumber}>{streakRecovery?.previousStreak}</Text>
+              <Text style={styles.modalStreakLabel}>day streak</Text>
+            </View>
+            <Text style={styles.modalText}>
+              Recover it for <Text style={styles.modalCostText}>{streakRecovery?.cost} coins</Text>
+            </Text>
+            <Text style={styles.modalCoinsAvailable}>
+              You have: {streakRecovery?.coins} coins
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.modalRecoverBtn, (streakRecovery?.coins || 0) < (streakRecovery?.cost || 0) && styles.modalBtnDisabled]}
+              onPress={handleRecoverStreak}
+              disabled={(streakRecovery?.coins || 0) < (streakRecovery?.cost || 0)}
+            >
+              <Text style={styles.modalRecoverBtnText}>
+                Recover Streak ({streakRecovery?.cost} coins)
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalDismissBtn} onPress={handleDismissRecovery}>
+              <Text style={styles.modalDismissBtnText}>Start Fresh</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -608,4 +673,31 @@ const styles = StyleSheet.create({
   achievementBadge: { alignItems: 'center', width: 70 },
   achievementIcon: { fontSize: 28 },
   achievementLabel: { fontSize: 10, color: Colors.textSecondary, textAlign: 'center', marginTop: 2 },
+
+  // Streak Recovery Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
+  modalContent: {
+    backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.xl,
+    alignItems: 'center', width: '100%', maxWidth: 340,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10,
+  },
+  modalEmoji: { fontSize: 48, marginBottom: Spacing.md },
+  modalTitle: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text, marginBottom: Spacing.sm, textAlign: 'center' },
+  modalText: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.sm },
+  modalStreakDisplay: {
+    backgroundColor: Colors.primary + '15', borderRadius: BorderRadius.lg, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl,
+    alignItems: 'center', marginVertical: Spacing.md,
+  },
+  modalStreakNumber: { fontSize: FontSize.hero, fontWeight: '800', color: Colors.primary },
+  modalStreakLabel: { fontSize: FontSize.sm, color: Colors.primaryDark, fontWeight: '600' },
+  modalCostText: { fontWeight: '800', color: Colors.primary },
+  modalCoinsAvailable: { fontSize: FontSize.sm, color: Colors.textLight, marginBottom: Spacing.lg },
+  modalRecoverBtn: {
+    backgroundColor: Colors.primary, borderRadius: BorderRadius.lg, paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl, width: '100%', alignItems: 'center', marginBottom: Spacing.sm,
+  },
+  modalBtnDisabled: { backgroundColor: Colors.textLight, opacity: 0.6 },
+  modalRecoverBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '700' },
+  modalDismissBtn: { paddingVertical: Spacing.md, width: '100%', alignItems: 'center' },
+  modalDismissBtnText: { color: Colors.textSecondary, fontSize: FontSize.md, fontWeight: '600' },
 });

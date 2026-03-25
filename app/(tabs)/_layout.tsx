@@ -78,6 +78,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: 'Shop',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cart" size={size} color={color} />
+          ),
+        }}
+      />
       {/* Stats & Profile accessible from Home header icons */}
       <Tabs.Screen
         name="dashboard"

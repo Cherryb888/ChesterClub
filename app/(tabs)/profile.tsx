@@ -4,14 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
-import { getProfile, saveProfile } from '../../services/storage';
-import { UserProfile, UserGoals } from '../../types';
+import { getProfile, saveProfile, getChesterLifeStage, LIFE_STAGE_INFO, getShopState, getShopItem } from '../../services/storage';
+import { UserProfile, UserGoals, ShopState } from '../../types';
+import ChesterAvatar from '../../components/Chester/ChesterAvatar';
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editing, setEditing] = useState(false);
   const [editGoals, setEditGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
   const [editName, setEditName] = useState('');
+  const [shopState, setShopState] = useState<ShopState | null>(null);
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -19,6 +21,8 @@ export default function ProfileScreen() {
       setProfile(p);
       setEditGoals(p.goals);
       setEditName(p.displayName);
+      const shop = await getShopState();
+      setShopState(shop);
     })();
   }, []));
 
@@ -91,15 +95,52 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Chester Info */}
+        {/* Chester Info - Enhanced */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Chester Stats</Text>
+          <Text style={styles.cardTitle}>Chester</Text>
+          <ChesterAvatar chester={profile.chester} size="medium" showInfo={true} />
+
+          {/* Life stage info */}
+          {(() => {
+            const stage = getChesterLifeStage(profile.chester.level);
+            const stageInfo = LIFE_STAGE_INFO[stage];
+            return (
+              <View style={styles.lifeStageCard}>
+                <Text style={[styles.lifeStageText, { color: stageInfo.color }]}>
+                  {stageInfo.emoji} {stageInfo.name}
+                </Text>
+                <Text style={styles.lifeStageDesc}>{stageInfo.description}</Text>
+              </View>
+            );
+          })()}
+
+          {/* Equipped items */}
+          {shopState && (shopState.equippedOutfit || shopState.equippedAccessory) && (
+            <View style={styles.equippedSection}>
+              <Text style={styles.equippedLabel}>Equipped</Text>
+              <View style={styles.equippedRow}>
+                {shopState.equippedOutfit && (
+                  <View style={styles.equippedItem}>
+                    <Text style={styles.equippedIcon}>{getShopItem(shopState.equippedOutfit)?.icon}</Text>
+                    <Text style={styles.equippedName}>{getShopItem(shopState.equippedOutfit)?.name}</Text>
+                  </View>
+                )}
+                {shopState.equippedAccessory && (
+                  <View style={styles.equippedItem}>
+                    <Text style={styles.equippedIcon}>{getShopItem(shopState.equippedAccessory)?.icon}</Text>
+                    <Text style={styles.equippedName}>{getShopItem(shopState.equippedAccessory)?.name}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Stats row */}
           <View style={styles.chesterStats}>
             <StatItem label="Level" value={String(profile.chester.level)} />
-            <StatItem label="XP" value={`${profile.chester.xp}/${profile.chester.level * 100}`} />
-            <StatItem label="Streak" value={`${profile.chester.streak} days`} />
-            <StatItem label="Mood" value={profile.chester.mood} />
-            <StatItem label="Coins" value={`🪙 ${profile.chester.coins}`} />
+            <StatItem label="Streak" value={`${profile.chester.streak}d`} />
+            <StatItem label="Coins" value={String(profile.chester.coins)} />
+            <StatItem label="Items" value={String(shopState?.ownedItems.length || 0)} />
           </View>
         </View>
 
@@ -173,4 +214,17 @@ const styles = StyleSheet.create({
   statValue: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.primary },
   statLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
   aboutText: { fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: 4 },
+
+  // Life stage
+  lifeStageCard: { alignItems: 'center', marginTop: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.background, borderRadius: BorderRadius.md },
+  lifeStageText: { fontSize: FontSize.md, fontWeight: '700' },
+  lifeStageDesc: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+
+  // Equipped items
+  equippedSection: { marginTop: Spacing.md },
+  equippedLabel: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.textSecondary, marginBottom: Spacing.xs },
+  equippedRow: { flexDirection: 'row', gap: Spacing.sm },
+  equippedItem: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.background, paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: BorderRadius.full },
+  equippedIcon: { fontSize: 16 },
+  equippedName: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
 });

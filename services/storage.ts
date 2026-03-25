@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeStage, MealPlan, WaterLog, Challenge, ChallengeProgress, ChallengesState } from '../types';
+import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeStage, MealPlan, WaterLog, Challenge, ChallengeProgress, ChallengesState, ShopItem, ShopState, OwnedItem } from '../types';
 
 const KEYS = {
   PROFILE: 'user_profile',
@@ -8,6 +8,7 @@ const KEYS = {
   MEAL_PLAN: 'current_meal_plan',
   WATER_PREFIX: 'water_log_',
   CHALLENGES: 'challenges_state',
+  SHOP: 'shop_state',
 };
 
 // ─── Profile ───
@@ -31,6 +32,8 @@ const DEFAULT_CHESTER: ChesterState = {
   achievements: [],
   coins: 0,
   previousStreak: 0,
+  equippedOutfit: null,
+  equippedAccessory: null,
 };
 
 export async function getProfile(): Promise<UserProfile> {
@@ -44,6 +47,8 @@ export async function getProfile(): Promise<UserProfile> {
     if (profile.goals.dailyWaterGlasses === undefined) profile.goals.dailyWaterGlasses = 8;
     if (profile.isPremiumMax === undefined) profile.isPremiumMax = false;
     if (profile.chester.previousStreak === undefined) profile.chester.previousStreak = 0;
+    if (profile.chester.equippedOutfit === undefined) profile.chester.equippedOutfit = null;
+    if (profile.chester.equippedAccessory === undefined) profile.chester.equippedAccessory = null;
     return profile;
   }
   const profile: UserProfile = {
@@ -658,4 +663,168 @@ export async function saveMealPlan(plan: MealPlan): Promise<void> {
 export async function getMealPlan(): Promise<MealPlan | null> {
   const data = await AsyncStorage.getItem(KEYS.MEAL_PLAN);
   return data ? JSON.parse(data) : null;
+}
+
+// ─── Shop ───
+
+export const SHOP_ITEMS: ShopItem[] = [
+  // Outfits
+  { id: 'outfit_bandana', name: 'Red Bandana', description: 'A classic red bandana around the neck', category: 'outfit', price: 50, icon: '🎀', emoji: '🎀', rarity: 'common' },
+  { id: 'outfit_sweater', name: 'Cozy Sweater', description: 'A warm knitted sweater for Chester', category: 'outfit', price: 100, icon: '🧥', emoji: '🧥', rarity: 'common' },
+  { id: 'outfit_cape', name: 'Super Cape', description: 'Chester becomes a superhero!', category: 'outfit', price: 200, icon: '🦸', emoji: '🦸', rarity: 'rare' },
+  { id: 'outfit_tux', name: 'Tuxedo', description: 'Fancy boy! Chester in a tux', category: 'outfit', price: 350, icon: '🤵', emoji: '🤵', rarity: 'rare' },
+  { id: 'outfit_astronaut', name: 'Space Suit', description: 'Chester in space! To the moon!', category: 'outfit', price: 500, icon: '🧑‍🚀', emoji: '🚀', rarity: 'epic' },
+  { id: 'outfit_king', name: 'Royal Robes', description: 'King Chester rules the club!', category: 'outfit', price: 1000, icon: '🫅', emoji: '👑', rarity: 'legendary' },
+
+  // Accessories
+  { id: 'acc_sunglasses', name: 'Cool Shades', description: 'Sunglasses for a cool pup', category: 'accessory', price: 30, icon: '🕶️', emoji: '🕶️', rarity: 'common' },
+  { id: 'acc_bowtie', name: 'Bow Tie', description: 'A dapper bow tie', category: 'accessory', price: 60, icon: '🎩', emoji: '🎩', rarity: 'common' },
+  { id: 'acc_flower', name: 'Flower Crown', description: 'A beautiful flower crown', category: 'accessory', price: 120, icon: '🌸', emoji: '🌸', rarity: 'rare' },
+  { id: 'acc_star', name: 'Star Collar', description: 'A collar with a shining star', category: 'accessory', price: 250, icon: '⭐', emoji: '⭐', rarity: 'epic' },
+  { id: 'acc_wings', name: 'Angel Wings', description: 'Chester gets angel wings!', category: 'accessory', price: 750, icon: '😇', emoji: '😇', rarity: 'legendary' },
+
+  // Treats (consumable - health/mood boost)
+  { id: 'treat_biscuit', name: 'Dog Biscuit', description: 'A tasty biscuit. Restores 15 health', category: 'treat', price: 15, icon: '🦴', emoji: '🦴', rarity: 'common', effect: { type: 'health_boost', value: 15 } },
+  { id: 'treat_steak', name: 'Juicy Steak', description: 'Premium steak! Restores 30 health', category: 'treat', price: 40, icon: '🥩', emoji: '🥩', rarity: 'rare', effect: { type: 'health_boost', value: 30 } },
+  { id: 'treat_cake', name: 'Pupcake', description: 'A special cake! Makes Chester excited', category: 'treat', price: 25, icon: '🧁', emoji: '🧁', rarity: 'common', effect: { type: 'mood_boost', value: 1 } },
+  { id: 'treat_superfood', name: 'Superfood Bowl', description: 'Full health restore!', category: 'treat', price: 100, icon: '🥗', emoji: '🥗', rarity: 'epic', effect: { type: 'health_boost', value: 100 } },
+
+  // Boosts (temporary effects)
+  { id: 'boost_xp', name: 'XP Bone', description: '2x XP for 24 hours', category: 'boost', price: 75, icon: '✨', emoji: '✨', rarity: 'rare', effect: { type: 'xp_boost', value: 2, duration: 24 } },
+  { id: 'boost_coin', name: 'Coin Magnet', description: '2x coins from challenges for 24h', category: 'boost', price: 100, icon: '🧲', emoji: '🧲', rarity: 'rare', effect: { type: 'coin_boost', value: 2, duration: 24 } },
+];
+
+export function getShopItem(itemId: string): ShopItem | undefined {
+  return SHOP_ITEMS.find(i => i.id === itemId);
+}
+
+const DEFAULT_SHOP: ShopState = {
+  ownedItems: [],
+  equippedOutfit: null,
+  equippedAccessory: null,
+  activeBoosts: [],
+};
+
+export async function getShopState(): Promise<ShopState> {
+  const data = await AsyncStorage.getItem(KEYS.SHOP);
+  if (data) {
+    const state: ShopState = JSON.parse(data);
+    // Clean expired boosts
+    const now = Date.now();
+    state.activeBoosts = state.activeBoosts.filter(b => b.expiresAt > now);
+    return state;
+  }
+  return { ...DEFAULT_SHOP };
+}
+
+async function saveShopState(state: ShopState): Promise<void> {
+  await AsyncStorage.setItem(KEYS.SHOP, JSON.stringify(state));
+}
+
+export async function purchaseItem(itemId: string): Promise<{ success: boolean; message: string }> {
+  const item = getShopItem(itemId);
+  if (!item) return { success: false, message: 'Item not found' };
+
+  const profile = await getProfile();
+  const shop = await getShopState();
+
+  // Check if already owned (non-consumables)
+  if (item.category === 'outfit' || item.category === 'accessory') {
+    if (shop.ownedItems.some(o => o.itemId === itemId)) {
+      return { success: false, message: 'You already own this item!' };
+    }
+  }
+
+  // Check coins
+  if (profile.chester.coins < item.price) {
+    return { success: false, message: `Not enough coins! Need ${item.price - profile.chester.coins} more.` };
+  }
+
+  // Deduct coins
+  profile.chester.coins -= item.price;
+
+  // Apply effect for consumables
+  if (item.category === 'treat' && item.effect) {
+    if (item.effect.type === 'health_boost') {
+      profile.chester.health = Math.min(100, profile.chester.health + item.effect.value);
+    }
+    if (item.effect.type === 'mood_boost') {
+      profile.chester.mood = 'excited';
+    }
+  } else if (item.category === 'boost' && item.effect?.duration) {
+    shop.activeBoosts.push({
+      itemId: item.id,
+      expiresAt: Date.now() + item.effect.duration * 60 * 60 * 1000,
+    });
+  } else {
+    // Outfit or accessory - add to owned
+    shop.ownedItems.push({ itemId, purchasedAt: Date.now(), equipped: false });
+  }
+
+  await saveProfile(profile);
+  await saveShopState(shop);
+  return { success: true, message: `Purchased ${item.name}!` };
+}
+
+export async function equipItem(itemId: string): Promise<void> {
+  const item = getShopItem(itemId);
+  if (!item) return;
+
+  const profile = await getProfile();
+  const shop = await getShopState();
+
+  if (item.category === 'outfit') {
+    // Unequip current
+    shop.ownedItems.forEach(o => {
+      const oi = getShopItem(o.itemId);
+      if (oi?.category === 'outfit') o.equipped = false;
+    });
+    // Equip new
+    const owned = shop.ownedItems.find(o => o.itemId === itemId);
+    if (owned) owned.equipped = true;
+    shop.equippedOutfit = itemId;
+    profile.chester.equippedOutfit = itemId;
+  } else if (item.category === 'accessory') {
+    shop.ownedItems.forEach(o => {
+      const oi = getShopItem(o.itemId);
+      if (oi?.category === 'accessory') o.equipped = false;
+    });
+    const owned = shop.ownedItems.find(o => o.itemId === itemId);
+    if (owned) owned.equipped = true;
+    shop.equippedAccessory = itemId;
+    profile.chester.equippedAccessory = itemId;
+  }
+
+  await saveShopState(shop);
+  await saveProfile(profile);
+}
+
+export async function unequipItem(category: 'outfit' | 'accessory'): Promise<void> {
+  const profile = await getProfile();
+  const shop = await getShopState();
+
+  shop.ownedItems.forEach(o => {
+    const oi = getShopItem(o.itemId);
+    if (oi?.category === category) o.equipped = false;
+  });
+
+  if (category === 'outfit') {
+    shop.equippedOutfit = null;
+    profile.chester.equippedOutfit = null;
+  } else {
+    shop.equippedAccessory = null;
+    profile.chester.equippedAccessory = null;
+  }
+
+  await saveShopState(shop);
+  await saveProfile(profile);
+}
+
+export async function hasActiveBoost(type: string): Promise<boolean> {
+  const shop = await getShopState();
+  const now = Date.now();
+  return shop.activeBoosts.some(b => {
+    const item = getShopItem(b.itemId);
+    return item?.effect?.type === type && b.expiresAt > now;
+  });
 }

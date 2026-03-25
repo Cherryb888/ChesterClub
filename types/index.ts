@@ -42,6 +42,8 @@ export interface ChesterState {
   achievements: string[];
   coins: number;
   previousStreak: number;
+  equippedOutfit: string | null;
+  equippedAccessory: string | null;
 }
 
 export interface UserProfile {
@@ -138,4 +140,40 @@ export interface ChallengesState {
   monthly: ChallengeProgress[];
   allTime: ChallengeProgress[];
   totalCoinsEarned: number;
+}
+
+// ─── Shop & Outfits ───
+
+export type ShopItemCategory = 'outfit' | 'accessory' | 'treat' | 'boost';
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  category: ShopItemCategory;
+  price: number;
+  icon: string;
+  emoji: string; // displayed on Chester
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  effect?: {
+    type: 'health_boost' | 'xp_boost' | 'coin_boost' | 'mood_boost';
+    value: number;
+    duration?: number; // hours, if temporary
+  };
+}
+
+export interface OwnedItem {
+  itemId: string;
+  purchasedAt: number;
+  equipped: boolean;
+}
+
+export interface ShopState {
+  ownedItems: OwnedItem[];
+  equippedOutfit: string | null; // item ID
+  equippedAccessory: string | null; // item ID
+  activeBoosts: {
+    itemId: string;
+    expiresAt: number;
+  }[];
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { ChesterState, ChesterLifeStage } from '../../types';
-import { getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
+import { getChesterLifeStage, LIFE_STAGE_INFO, getShopItem } from '../../services/storage';
 
 interface Props {
   chester: ChesterState;
@@ -84,6 +84,18 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
           {/* Medal for champion */}
           {stage === 'champion' && size !== 'small' && (
             <Text style={styles.medal}>🏅</Text>
+          )}
+          {/* Equipped outfit */}
+          {chester.equippedOutfit && size !== 'small' && (
+            <Text style={[styles.equippedOutfit, { fontSize: dimensions * 0.2 }]}>
+              {getShopItem(chester.equippedOutfit)?.emoji}
+            </Text>
+          )}
+          {/* Equipped accessory */}
+          {chester.equippedAccessory && size !== 'small' && (
+            <Text style={[styles.equippedAccessory, { fontSize: dimensions * 0.18 }]}>
+              {getShopItem(chester.equippedAccessory)?.emoji}
+            </Text>
           )}
         </View>
       </View>
@@ -183,6 +195,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -8,
     fontSize: 20,
+  },
+  equippedOutfit: {
+    position: 'absolute',
+    bottom: -12,
+    left: -8,
+  },
+  equippedAccessory: {
+    position: 'absolute',
+    top: -14,
+    left: -6,
   },
   info: {
     alignItems: 'center',
