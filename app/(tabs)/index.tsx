@@ -16,24 +16,23 @@ import {
   getMealPlan, calculateNutritionScore,
   getChallengesState, refreshChallengeProgress, claimChallengeReward,
   DAILY_CHALLENGES, WEEKLY_CHALLENGES, MONTHLY_CHALLENGES, ALL_TIME_CHALLENGES,
+  popPendingAchievement, getPendingMilestone, getWeeklyStats,
 } from '../../services/storage';
+import { getChesterDialogue } from '../../services/chesterDialogue';
+import { AchievementDefinition } from '../../constants/achievements';
+import { StreakMilestone } from '../../constants/streakRewards';
+import AchievementUnlockedModal from '../../components/AchievementUnlockedModal';
+import StreakMilestoneModal from '../../components/StreakMilestoneModal';
+import WeeklyRecap from '../../components/WeeklyRecap';
 import { ChesterState, DailyLog, UserGoals, WaterLog, MealPlan, ChallengesState, Challenge, ChallengeProgress } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const GREETINGS = [
-  "Woof! Ready to track some yummy food?",
-  "Let's have a paw-some day of eating!",
-  "Chester's hungry for some data! Let's log!",
-  "Bark bark! Time to fuel up!",
-  "Who's a good tracker? You are!",
-];
 
 export default function HomeScreen() {
   const router = useRouter();
   const pagerRef = useRef<FlatList>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [], coins: 0 });
+  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [], coins: 0, previousStreak: 0, streakShieldActive: false });
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
   const [goals, setGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
   const [waterLog, setWaterLog] = useState<WaterLog>({ date: '', glasses: 0, goalReached: false });
@@ -41,9 +40,13 @@ export default function HomeScreen() {
   const [nutritionScore, setNutritionScore] = useState(0);
   const [challengesState, setChallengesState] = useState<ChallengesState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [greeting] = useState(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
+  const [greeting, setGreeting] = useState('Woof! Ready to track some yummy food?');
   const [challengeTab, setChallengeTab] = useState<'daily' | 'weekly' | 'monthly' | 'all_time'>('daily');
   const [isPremium, setIsPremium] = useState(false);
+  const [achievementModal, setAchievementModal] = useState<AchievementDefinition | null>(null);
+  const [milestoneModal, setMilestoneModal] = useState<StreakMilestone | null>(null);
+  const [weeklyRecapVisible, setWeeklyRecapVisible] = useState(false);
+  const [weeklyStats, setWeeklyStats] = useState<any>(null);
 
   const loadData = useCallback(async () => {
     await checkChesterDecay();
@@ -62,6 +65,42 @@ export default function HomeScreen() {
     await refreshChallengeProgress();
     const challenges = await getChallengesState();
     setChallengesState(challenges);
+
+    // Generate context-aware Chester dialogue
+    const dialogue = getChesterDialogue({
+      chester: profile.chester,
+      todayLog: log,
+      goals: profile.goals,
+      waterLog: water,
+      hour: new Date().getHours(),
+    });
+    setGreeting(dialogue);
+
+    // Show pending achievement unlock celebration
+    const pending = await popPendingAchievement();
+    if (pending) {
+      setAchievementModal(pending);
+    }
+
+    // Show pending streak milestone celebration
+    const milestone = await getPendingMilestone();
+    if (milestone) {
+      // Delay slightly if achievement modal is showing
+      if (pending) {
+        setTimeout(() => setMilestoneModal(milestone), 1500);
+      } else {
+        setMilestoneModal(milestone);
+      }
+    }
+
+    // Show weekly recap on Mondays (day 1) if not already shown today
+    const now = new Date();
+    if (now.getDay() === 1) {
+      const stats = await getWeeklyStats();
+      if (stats.daysLogged > 0) {
+        setWeeklyStats(stats);
+      }
+    }
   }, []);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
@@ -286,6 +325,10 @@ export default function HomeScreen() {
         {/* Club Header */}
         <View style={styles.clubHeader}>
           <Text style={styles.clubTitle}>The Club</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/shop')} style={styles.shopBtn}>
+            <Ionicons name="bag-handle" size={18} color={Colors.primary} />
+            <Text style={styles.shopBtnText}>Shop</Text>
+          </TouchableOpacity>
           <View style={styles.coinsBadge}>
             <Text style={styles.coinsIcon}>🪙</Text>
             <Text style={styles.coinsText}>{chester.coins}</Text>
@@ -295,7 +338,7 @@ export default function HomeScreen() {
         {/* Stats Summary */}
         <View style={styles.statsGrid}>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{chester.streak}</Text>
+            <Text style={styles.statValue}>{chester.streak}{chester.streakShieldActive ? ' 🛡️' : ''}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
           <View style={styles.statBox}>
@@ -395,19 +438,49 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {/* Achievements */}
-        {chester.achievements.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Achievements</Text>
+        {/* Badges */}
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/badges')}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Badges</Text>
+            <View style={styles.badgeCountPill}>
+              <Text style={styles.badgeCountText}>{chester.achievements.length}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+          </View>
+          {chester.achievements.length > 0 ? (
             <View style={styles.achievementsGrid}>
-              {chester.achievements.map(a => (
+              {chester.achievements.slice(0, 6).map(a => (
                 <View key={a} style={styles.achievementBadge}>
                   <Text style={styles.achievementIcon}>{getAchievementIcon(a)}</Text>
                   <Text style={styles.achievementLabel}>{getAchievementLabel(a)}</Text>
                 </View>
               ))}
+              {chester.achievements.length > 6 && (
+                <View style={styles.achievementBadge}>
+                  <Text style={styles.achievementIcon}>...</Text>
+                  <Text style={styles.achievementLabel}>More</Text>
+                </View>
+              )}
             </View>
-          </View>
+          ) : (
+            <Text style={styles.noBadgesText}>Start tracking to earn badges!</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Weekly Recap */}
+        {weeklyStats && (
+          <TouchableOpacity
+            style={[styles.card, { borderWidth: 1, borderColor: Colors.primary + '40' }]}
+            onPress={() => setWeeklyRecapVisible(true)}
+          >
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>Weekly Recap</Text>
+              <Text style={{ fontSize: 20 }}>📊</Text>
+            </View>
+            <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary }}>
+              Tap to see how your week went!
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Swipe hint */}
@@ -442,6 +515,36 @@ export default function HomeScreen() {
           setCurrentPage(idx);
         }}
       />
+
+      {/* Achievement Celebration Modal */}
+      <AchievementUnlockedModal
+        achievement={achievementModal}
+        visible={!!achievementModal}
+        onClose={async () => {
+          setAchievementModal(null);
+          // Check for more pending achievements
+          const next = await popPendingAchievement();
+          if (next) {
+            setTimeout(() => setAchievementModal(next), 400);
+          }
+        }}
+      />
+
+      {/* Streak Milestone Celebration Modal */}
+      <StreakMilestoneModal
+        milestone={milestoneModal}
+        visible={!!milestoneModal}
+        onClose={() => setMilestoneModal(null)}
+      />
+
+      {/* Weekly Recap Modal */}
+      {weeklyStats && (
+        <WeeklyRecap
+          visible={weeklyRecapVisible}
+          stats={weeklyStats}
+          onClose={() => setWeeklyRecapVisible(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -460,19 +563,15 @@ function MacroStat({ label, value, goal, color, unit }: { label: string; value: 
 }
 
 function getAchievementIcon(id: string): string {
-  const map: Record<string, string> = {
-    first_scan: '📸', streak_7: '🔥', streak_30: '🔥🔥', streak_60: '🔥🔥🔥',
-    streak_90: '💎', young_dog: '🐕', adult_dog: '🦮', champion: '🏆', golden: '👑',
-  };
-  return map[id] || '⭐';
+  const { getAchievementById } = require('../../constants/achievements');
+  const achievement = getAchievementById(id);
+  return achievement?.icon || '⭐';
 }
 
 function getAchievementLabel(id: string): string {
-  const map: Record<string, string> = {
-    first_scan: 'First Scan', streak_7: '7-Day', streak_30: '30-Day', streak_60: '60-Day',
-    streak_90: '90-Day', young_dog: 'Young Dog', adult_dog: 'Adult Dog', champion: 'Champion', golden: 'Golden',
-  };
-  return map[id] || id;
+  const { getAchievementById } = require('../../constants/achievements');
+  const achievement = getAchievementById(id);
+  return achievement?.title || id;
 }
 
 const styles = StyleSheet.create({
@@ -614,4 +713,16 @@ const styles = StyleSheet.create({
   achievementBadge: { alignItems: 'center', width: 70 },
   achievementIcon: { fontSize: 28 },
   achievementLabel: { fontSize: 10, color: Colors.textSecondary, textAlign: 'center', marginTop: 2 },
+  badgeCountPill: {
+    backgroundColor: Colors.primary + '20', paddingHorizontal: Spacing.sm,
+    paddingVertical: 2, borderRadius: BorderRadius.full, marginRight: 'auto', marginLeft: Spacing.sm,
+  },
+  badgeCountText: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.primary },
+  noBadgesText: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center', paddingVertical: Spacing.md },
+  shopBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: Colors.primary + '15', paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs, borderRadius: BorderRadius.full,
+  },
+  shopBtnText: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.primary },
 });

@@ -14,7 +14,7 @@ const CHART_PADDING = Spacing.lg * 2 + Spacing.lg * 2;
 const CHART_WIDTH = SCREEN_WIDTH - CHART_PADDING;
 
 export default function WeightScreen() {
-  const [history, setHistory] = useState<{ date: string; weight: number }[]>([]);
+  const [history, setHistory] = useState<{ date: string; weight: number; unit: 'kg' | 'lbs' }[]>([]);
   const [inputWeight, setInputWeight] = useState('');
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
   const [showInput, setShowInput] = useState(false);

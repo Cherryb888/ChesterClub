@@ -42,6 +42,7 @@ export interface ChesterState {
   achievements: string[];
   coins: number;
   previousStreak: number;
+  streakShieldActive: boolean;
 }
 
 export interface UserProfile {
@@ -52,7 +53,7 @@ export interface UserProfile {
   chester: ChesterState;
   createdAt: number;
   onboardingComplete: boolean;
-  weightHistory: { date: string; weight: number }[];
+  weightHistory: { date: string; weight: number; unit: 'kg' | 'lbs' }[];
   isPremiumMax: boolean; // highest tier subscription
 }
 
@@ -127,6 +128,16 @@ export interface ChallengeProgress {
   completed: boolean;
   completedAt?: number;
   coinsClaimed: boolean;
+}
+
+// ─── Chester Dialogue ───
+
+export interface DialogueContext {
+  chester: ChesterState;
+  todayLog: DailyLog | null;
+  goals: UserGoals;
+  waterLog: WaterLog;
+  hour: number; // 0-23
 }
 
 export interface ChallengesState {

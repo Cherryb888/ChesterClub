@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, Animated } from 'react-native';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { ChesterState, ChesterLifeStage } from '../../types';
 import { getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
+import { getEquippedItems } from '../../services/shopService';
+import { getShopItemById, BACKGROUND_COLORS } from '../../constants/shopItems';
 
 // Single image for now — replace with stage-specific images later
 const CHESTER_IMAGE = require('../../assets/chester/chester-happy.png');
@@ -38,6 +40,18 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
   const stage = getChesterLifeStage(chester.level);
   const stageInfo = LIFE_STAGE_INFO[stage];
 
+  // Equipped cosmetics
+  const [equipped, setEquipped] = useState<Record<string, string>>({});
+  useEffect(() => {
+    getEquippedItems().then(setEquipped).catch(() => {});
+  }, [chester]); // re-fetch when chester state changes
+
+  const equippedHat = equipped.hat ? getShopItemById(equipped.hat) : null;
+  const equippedAccessory = equipped.accessory ? getShopItemById(equipped.accessory) : null;
+  const equippedBg = equipped.background ? getShopItemById(equipped.background) : null;
+  const equippedTitle = equipped.title ? getShopItemById(equipped.title) : null;
+  const bgColors = equippedBg ? BACKGROUND_COLORS[equippedBg.id] : null;
+
   // Gentle breathing animation
   const breatheAnim = useRef(new Animated.Value(1)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -63,6 +77,9 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
       bounceAnim.setValue(0);
     }
   }, [chester.mood]);
+
+  // Custom background color from shop
+  const containerBg = bgColors ? bgColors[0] + '30' : '#FFF8F0';
 
   // Stage-based border and glow
   const borderColor = stage === 'golden' ? '#FFD700' : stage === 'champion' ? '#FFD700' : Colors.primary;
@@ -97,6 +114,7 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
           borderRadius: dimensions / 2,
           borderColor,
           borderWidth,
+          backgroundColor: containerBg,
         }]}>
           <Image
             source={CHESTER_IMAGE}
@@ -122,17 +140,35 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
             </View>
           )}
 
-          {/* Crown for golden Chester */}
-          {stage === 'golden' && (
+          {/* Crown for golden Chester (only if no shop hat equipped) */}
+          {stage === 'golden' && !equippedHat && (
             <View style={styles.crownContainer}>
               <Text style={[styles.crown, { fontSize: size === 'small' ? 16 : size === 'medium' ? 22 : 28 }]}>👑</Text>
             </View>
           )}
 
-          {/* Medal for champion */}
-          {stage === 'champion' && (
+          {/* Medal for champion (only if no shop accessory equipped) */}
+          {stage === 'champion' && !equippedAccessory && (
             <View style={styles.medalContainer}>
               <Text style={[styles.medal, { fontSize: size === 'small' ? 14 : size === 'medium' ? 18 : 22 }]}>🏅</Text>
+            </View>
+          )}
+
+          {/* Shop hat overlay */}
+          {equippedHat && (
+            <View style={styles.crownContainer}>
+              <Text style={{ fontSize: size === 'small' ? 16 : size === 'medium' ? 24 : 32, textAlign: 'center' }}>
+                {equippedHat.icon}
+              </Text>
+            </View>
+          )}
+
+          {/* Shop accessory overlay */}
+          {equippedAccessory && (
+            <View style={styles.accessoryContainer}>
+              <Text style={{ fontSize: size === 'small' ? 14 : size === 'medium' ? 20 : 26, textAlign: 'center' }}>
+                {equippedAccessory.icon}
+              </Text>
             </View>
           )}
         </View>
@@ -146,6 +182,9 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
       {showInfo && (
         <View style={styles.info}>
           <Text style={styles.name}>Chester</Text>
+          {equippedTitle && (
+            <Text style={styles.titleBadge}>{equippedTitle.icon} {equippedTitle.name}</Text>
+          )}
           <Text style={[styles.stageBadge, { color: stageInfo.color }]}>{stageInfo.name}</Text>
           <Text style={[styles.mood, { color: MOOD_COLORS[chester.mood] }]}>{MOOD_LABELS[chester.mood]}</Text>
 
@@ -366,5 +405,19 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: '#B8860B',
     fontWeight: '600',
+  },
+  accessoryContainer: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 12,
+    padding: 2,
+  },
+  titleBadge: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginTop: 2,
   },
 });

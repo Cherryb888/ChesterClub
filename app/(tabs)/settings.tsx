@@ -13,19 +13,26 @@ import {
   AppSettings,
 } from '../../services/storage';
 import { UserProfile } from '../../types';
+import { isFirebaseConfigured, getCurrentUser } from '../../services/firebase';
+import { performFullSync, getLastSyncTime } from '../../services/firestore';
+import { rescheduleAll } from '../../services/notifications';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => {
     (async () => {
       const s = await getSettings();
       const p = await getProfile();
+      const syncTime = await getLastSyncTime();
       setSettings(s);
       setProfile(p);
+      setLastSync(syncTime);
     })();
   }, []));
 
@@ -34,6 +41,11 @@ export default function SettingsScreen() {
     const updated = { ...settings, [key]: value };
     setSettings(updated);
     await saveSettings(updated);
+
+    // Reschedule notifications when relevant settings change
+    if (['mealReminders', 'waterReminders', 'streakWarnings', 'reminderTimes'].includes(key as string)) {
+      rescheduleAll(updated).catch(console.error);
+    }
   };
 
   const handleExportData = async () => {
@@ -193,6 +205,43 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Cloud Sync */}
+        {isFirebaseConfigured && getCurrentUser() && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Cloud Sync</Text>
+            <View style={styles.card}>
+              <TouchableOpacity
+                onPress={async () => {
+                  setSyncing(true);
+                  const result = await performFullSync();
+                  setSyncing(false);
+                  if (result.success) {
+                    const syncTime = await getLastSyncTime();
+                    setLastSync(syncTime);
+                    Alert.alert('Synced!', 'All your data has been synced to the cloud.');
+                  } else {
+                    Alert.alert('Sync Failed', result.error || 'Please try again.');
+                  }
+                }}
+                disabled={syncing}
+              >
+                <SettingRow
+                  icon="cloud-upload-outline"
+                  label="Sync Now"
+                  subtitle={lastSync ? `Last synced: ${new Date(lastSync).toLocaleString()}` : 'Never synced'}
+                  last
+                >
+                  {syncing ? (
+                    <Text style={styles.exportingText}>Syncing...</Text>
+                  ) : (
+                    <Ionicons name="sync" size={20} color={Colors.primary} />
+                  )}
+                </SettingRow>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Data */}
         <View style={styles.section}>
