@@ -15,6 +15,7 @@ import {
 import { UserProfile } from '../../types';
 import { isFirebaseConfigured, getCurrentUser } from '../../services/firebase';
 import { performFullSync, getLastSyncTime } from '../../services/firestore';
+import { rescheduleAll } from '../../services/notifications';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -40,6 +41,11 @@ export default function SettingsScreen() {
     const updated = { ...settings, [key]: value };
     setSettings(updated);
     await saveSettings(updated);
+
+    // Reschedule notifications when relevant settings change
+    if (['mealReminders', 'waterReminders', 'streakWarnings', 'reminderTimes'].includes(key as string)) {
+      rescheduleAll(updated).catch(console.error);
+    }
   };
 
   const handleExportData = async () => {

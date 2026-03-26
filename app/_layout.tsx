@@ -2,15 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '../constants/theme';
-import { isOnboardingComplete, runMigrations } from '../services/storage';
+import { isOnboardingComplete, runMigrations, getSettings } from '../services/storage';
 import { onAuthChange, isFirebaseConfigured } from '../services/firebase';
 import { onUserSignIn, performFullSync } from '../services/firestore';
 import { startConnectivityListener, stopConnectivityListener } from '../services/syncQueue';
+import { initializeNotifications, rescheduleAll } from '../services/notifications';
 
 export default function RootLayout() {
   // Run data migrations on app start
   useEffect(() => {
     runMigrations().catch(console.error);
+  }, []);
+
+  // Initialize notifications and schedule based on settings
+  useEffect(() => {
+    (async () => {
+      const granted = await initializeNotifications();
+      if (granted) {
+        const settings = await getSettings();
+        await rescheduleAll(settings);
+      }
+    })().catch(console.error);
   }, []);
 
   // Start connectivity listener for offline sync queue
