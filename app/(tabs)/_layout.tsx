@@ -107,6 +107,10 @@ export default function TabLayout() {
         name="badges"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="shop"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

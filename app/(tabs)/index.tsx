@@ -299,6 +299,10 @@ export default function HomeScreen() {
         {/* Club Header */}
         <View style={styles.clubHeader}>
           <Text style={styles.clubTitle}>The Club</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/shop')} style={styles.shopBtn}>
+            <Ionicons name="bag-handle" size={18} color={Colors.primary} />
+            <Text style={styles.shopBtnText}>Shop</Text>
+          </TouchableOpacity>
           <View style={styles.coinsBadge}>
             <Text style={styles.coinsIcon}>🪙</Text>
             <Text style={styles.coinsText}>{chester.coins}</Text>
@@ -657,4 +661,10 @@ const styles = StyleSheet.create({
   },
   badgeCountText: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.primary },
   noBadgesText: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center', paddingVertical: Spacing.md },
+  shopBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: Colors.primary + '15', paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs, borderRadius: BorderRadius.full,
+  },
+  shopBtnText: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.primary },
 });
