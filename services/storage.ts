@@ -2,27 +2,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeStage, MealPlan, WaterLog, Challenge, ChallengeProgress, ChallengesState } from '../types';
 
 // ─── Background Cloud Sync ───
-// These fire-and-forget to avoid blocking local operations.
-// Imported lazily to avoid circular dependencies.
+// Uses the offline-first sync queue: syncs immediately when online,
+// queues for later when offline.
 
-function backgroundSync(fn: () => Promise<void>) {
-  fn().catch(() => { /* silent fail — offline is fine */ });
-}
+import { smartSync } from './syncQueue';
 
 function syncProfileBackground() {
-  import('./firestore').then(m => backgroundSync(() => m.syncProfileToCloud()));
+  smartSync({ type: 'profile' }).catch(() => {});
 }
 
 function syncFoodLogBackground(date: string) {
-  import('./firestore').then(m => backgroundSync(() => m.syncFoodLogToCloud(date)));
+  smartSync({ type: 'foodLog', date }).catch(() => {});
 }
 
 function syncWaterLogBackground(date: string) {
-  import('./firestore').then(m => backgroundSync(() => m.syncWaterLogToCloud(date)));
+  smartSync({ type: 'waterLog', date }).catch(() => {});
 }
 
 function syncChallengesBackground() {
-  import('./firestore').then(m => backgroundSync(() => m.syncChallengesToCloud()));
+  smartSync({ type: 'challenges' }).catch(() => {});
 }
 
 const KEYS = {

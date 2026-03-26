@@ -5,11 +5,18 @@ import { Colors } from '../constants/theme';
 import { isOnboardingComplete, runMigrations } from '../services/storage';
 import { onAuthChange, isFirebaseConfigured } from '../services/firebase';
 import { onUserSignIn, performFullSync } from '../services/firestore';
+import { startConnectivityListener, stopConnectivityListener } from '../services/syncQueue';
 
 export default function RootLayout() {
   // Run data migrations on app start
   useEffect(() => {
     runMigrations().catch(console.error);
+  }, []);
+
+  // Start connectivity listener for offline sync queue
+  useEffect(() => {
+    startConnectivityListener();
+    return () => stopConnectivityListener();
   }, []);
 
   // Wire Firebase auth listener for cloud sync
