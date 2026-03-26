@@ -44,8 +44,9 @@ const KEYS = {
 //   3 - Added water tracking, challenges, premium
 //   4 - Added previousStreak, weight history
 //   5 - Added settings, data export, cloud sync (Phase 2)
+//   6 - Added unit field to weight history entries
 
-const CURRENT_SCHEMA_VERSION = 5;
+const CURRENT_SCHEMA_VERSION = 6;
 
 export async function runMigrations(): Promise<void> {
   const raw = await AsyncStorage.getItem(KEYS.SCHEMA_VERSION);
@@ -101,6 +102,17 @@ export async function runMigrations(): Promise<void> {
     if (!profile.chester) profile.chester = DEFAULT_CHESTER;
     if (profile.createdAt === undefined) profile.createdAt = Date.now();
     if (profile.onboardingComplete === undefined) profile.onboardingComplete = false;
+    migrated = true;
+  }
+
+  // v5 → v6: Add unit field to weight history entries
+  if (currentVersion < 6) {
+    if (profile.weightHistory && Array.isArray(profile.weightHistory)) {
+      profile.weightHistory = profile.weightHistory.map((e: any) => ({
+        ...e,
+        unit: e.unit || 'kg',
+      }));
+    }
     migrated = true;
   }
 
@@ -402,6 +414,7 @@ export async function removeWaterGlass(date?: string): Promise<WaterLog> {
     log.goalReached = false;
   }
   await AsyncStorage.setItem(KEYS.WATER_PREFIX + key, JSON.stringify(log));
+  syncWaterLogBackground(key);
   return log;
 }
 
@@ -789,7 +802,7 @@ export async function addWeightEntry(weight: number, unit: 'kg' | 'lbs' = 'kg'):
 
   // Remove existing entry for today if any
   profile.weightHistory = profile.weightHistory.filter(e => e.date !== today);
-  profile.weightHistory.push({ date: today, weight });
+  profile.weightHistory.push({ date: today, weight, unit });
 
   // Sort by date descending
   profile.weightHistory.sort((a, b) => b.date.localeCompare(a.date));
@@ -797,7 +810,7 @@ export async function addWeightEntry(weight: number, unit: 'kg' | 'lbs' = 'kg'):
   await saveProfile(profile);
 }
 
-export async function getWeightHistory(): Promise<{ date: string; weight: number }[]> {
+export async function getWeightHistory(): Promise<{ date: string; weight: number; unit: 'kg' | 'lbs' }[]> {
   const profile = await getProfile();
   return profile.weightHistory.sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -846,6 +859,7 @@ export async function getSettings(): Promise<AppSettings> {
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
   await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  smartSync({ type: 'settings' }).catch(() => {});
 }
 
 // ─── Data Export ───

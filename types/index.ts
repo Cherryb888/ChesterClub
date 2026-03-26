@@ -52,7 +52,7 @@ export interface UserProfile {
   chester: ChesterState;
   createdAt: number;
   onboardingComplete: boolean;
-  weightHistory: { date: string; weight: number }[];
+  weightHistory: { date: string; weight: number; unit: 'kg' | 'lbs' }[];
   isPremiumMax: boolean; // highest tier subscription
 }
 

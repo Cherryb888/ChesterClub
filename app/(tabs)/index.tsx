@@ -33,7 +33,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const pagerRef = useRef<FlatList>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [], coins: 0 });
+  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [], coins: 0, previousStreak: 0 });
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
   const [goals, setGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
   const [waterLog, setWaterLog] = useState<WaterLog>({ date: '', glasses: 0, goalReached: false });

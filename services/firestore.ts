@@ -1,6 +1,6 @@
 import {
-  doc, setDoc, getDoc, collection, getDocs, writeBatch,
-  serverTimestamp, query, where, Timestamp,
+  doc, setDoc, getDoc, collection,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { getDb, getCurrentUser, isFirebaseConfigured } from './firebase';
 import { getProfile, saveProfile, getDailyLog, getWaterLog, getTodayKey, getChallengesState, getSettings, saveSettings, AppSettings } from './storage';
@@ -106,15 +106,15 @@ export async function mergeProfileFromCloud(): Promise<void> {
 }
 
 function mergeWeightHistory(
-  local: { date: string; weight: number }[],
-  cloud: { date: string; weight: number }[]
-): { date: string; weight: number }[] {
-  const map = new Map<string, number>();
+  local: { date: string; weight: number; unit: 'kg' | 'lbs' }[],
+  cloud: { date: string; weight: number; unit: 'kg' | 'lbs' }[]
+): { date: string; weight: number; unit: 'kg' | 'lbs' }[] {
+  const map = new Map<string, { weight: number; unit: 'kg' | 'lbs' }>();
   // Cloud first, then local overrides
-  for (const entry of cloud) map.set(entry.date, entry.weight);
-  for (const entry of local) map.set(entry.date, entry.weight);
+  for (const entry of cloud) map.set(entry.date, { weight: entry.weight, unit: entry.unit || 'kg' });
+  for (const entry of local) map.set(entry.date, { weight: entry.weight, unit: entry.unit || 'kg' });
   return Array.from(map.entries())
-    .map(([date, weight]) => ({ date, weight }))
+    .map(([date, { weight, unit }]) => ({ date, weight, unit }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
