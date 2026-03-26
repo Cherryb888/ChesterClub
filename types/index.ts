@@ -129,6 +129,16 @@ export interface ChallengeProgress {
   coinsClaimed: boolean;
 }
 
+// ─── Chester Dialogue ───
+
+export interface DialogueContext {
+  chester: ChesterState;
+  todayLog: DailyLog | null;
+  goals: UserGoals;
+  waterLog: WaterLog;
+  hour: number; // 0-23
+}
+
 export interface ChallengesState {
   date: string; // for tracking daily reset
   weekStart: string; // for tracking weekly reset

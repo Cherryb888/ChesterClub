@@ -17,17 +17,10 @@ import {
   getChallengesState, refreshChallengeProgress, claimChallengeReward,
   DAILY_CHALLENGES, WEEKLY_CHALLENGES, MONTHLY_CHALLENGES, ALL_TIME_CHALLENGES,
 } from '../../services/storage';
+import { getChesterDialogue } from '../../services/chesterDialogue';
 import { ChesterState, DailyLog, UserGoals, WaterLog, MealPlan, ChallengesState, Challenge, ChallengeProgress } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const GREETINGS = [
-  "Woof! Ready to track some yummy food?",
-  "Let's have a paw-some day of eating!",
-  "Chester's hungry for some data! Let's log!",
-  "Bark bark! Time to fuel up!",
-  "Who's a good tracker? You are!",
-];
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -41,7 +34,7 @@ export default function HomeScreen() {
   const [nutritionScore, setNutritionScore] = useState(0);
   const [challengesState, setChallengesState] = useState<ChallengesState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [greeting] = useState(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
+  const [greeting, setGreeting] = useState('Woof! Ready to track some yummy food?');
   const [challengeTab, setChallengeTab] = useState<'daily' | 'weekly' | 'monthly' | 'all_time'>('daily');
   const [isPremium, setIsPremium] = useState(false);
 
@@ -62,6 +55,16 @@ export default function HomeScreen() {
     await refreshChallengeProgress();
     const challenges = await getChallengesState();
     setChallengesState(challenges);
+
+    // Generate context-aware Chester dialogue
+    const dialogue = getChesterDialogue({
+      chester: profile.chester,
+      todayLog: log,
+      goals: profile.goals,
+      waterLog: water,
+      hour: new Date().getHours(),
+    });
+    setGreeting(dialogue);
   }, []);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
