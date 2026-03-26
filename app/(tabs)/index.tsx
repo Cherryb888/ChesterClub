@@ -118,9 +118,14 @@ export default function HomeScreen() {
           <Ionicons name="stats-chart" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.header}>ChesterClub</Text>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
-          <Ionicons name="person-circle" size={28} color={Colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
+            <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+            <Ionicons name="person-circle" size={28} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Chester */}
@@ -481,6 +486,7 @@ const styles = StyleSheet.create({
 
   // Header
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
+  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   header: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.primary, textAlign: 'center' },
 
   // Chester

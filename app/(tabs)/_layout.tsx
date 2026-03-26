@@ -78,13 +78,25 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Stats & Profile accessible from Home header icons */}
+      {/* Hidden screens - accessible via navigation from other screens */}
       <Tabs.Screen
         name="dashboard"
         options={{ href: null }}
       />
       <Tabs.Screen
         name="profile"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="weight"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="premium"
         options={{ href: null }}
       />
     </Tabs>

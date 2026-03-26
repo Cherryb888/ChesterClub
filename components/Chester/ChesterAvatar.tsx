@@ -1,23 +1,17 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, Animated } from 'react-native';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { ChesterState, ChesterLifeStage } from '../../types';
 import { getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
+
+// Single image for now — replace with stage-specific images later
+const CHESTER_IMAGE = require('../../assets/chester/chester-happy.png');
 
 interface Props {
   chester: ChesterState;
   size?: 'small' | 'medium' | 'large';
   showInfo?: boolean;
 }
-
-const MOOD_FACES: Record<ChesterState['mood'], string> = {
-  happy: '(^.^)',
-  excited: '(^o^)',
-  neutral: '(-.-)',
-  hungry: '(o.o)',
-  sleepy: '(u.u)',
-  sad: '(T.T)',
-};
 
 const MOOD_LABELS: Record<ChesterState['mood'], string> = {
   happy: 'Happy',
@@ -28,71 +22,132 @@ const MOOD_LABELS: Record<ChesterState['mood'], string> = {
   sad: 'Needs you...',
 };
 
+const MOOD_COLORS: Record<ChesterState['mood'], string> = {
+  happy: Colors.success,
+  excited: '#FF6B35',
+  neutral: Colors.textSecondary,
+  hungry: Colors.warning,
+  sleepy: '#9E9E9E',
+  sad: Colors.error,
+};
+
 export default function ChesterAvatar({ chester, size = 'medium', showInfo = true }: Props) {
   const dimensions = { small: 80, medium: 140, large: 200 }[size];
-  const fontSize = { small: 24, medium: 40, large: 56 }[size];
-  const earSize = { small: 16, medium: 28, large: 36 }[size];
+  const imageSize = { small: 64, medium: 120, large: 176 }[size];
 
   const stage = getChesterLifeStage(chester.level);
   const stageInfo = LIFE_STAGE_INFO[stage];
 
-  // Border color changes with life stage
-  const borderColor = stage === 'golden' ? '#FFD700' : stage === 'champion' ? '#FFD700' : Colors.primary;
-  // Golden aura for max stage
-  const glowColor = stage === 'golden' ? 'rgba(255, 215, 0, 0.4)' : stage === 'champion' ? 'rgba(255, 215, 0, 0.2)' : 'transparent';
+  // Gentle breathing animation
+  const breatheAnim = useRef(new Animated.Value(1)).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
 
-  // Health affects ear droop for sad chester
-  const earDroop = chester.mood === 'sad' || chester.mood === 'hungry';
+  useEffect(() => {
+    // Breathing effect
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(breatheAnim, { toValue: 1.04, duration: 2000, useNativeDriver: true }),
+        Animated.timing(breatheAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+      ])
+    ).start();
+
+    // Excited bounce
+    if (chester.mood === 'excited') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(bounceAnim, { toValue: -8, duration: 300, useNativeDriver: true }),
+          Animated.timing(bounceAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      bounceAnim.setValue(0);
+    }
+  }, [chester.mood]);
+
+  // Stage-based border and glow
+  const borderColor = stage === 'golden' ? '#FFD700' : stage === 'champion' ? '#FFD700' : Colors.primary;
+  const borderWidth = stage === 'golden' ? 4 : stage === 'champion' ? 3 : 2;
+  const glowColor = stage === 'golden' ? 'rgba(255, 215, 0, 0.35)' : stage === 'champion' ? 'rgba(255, 215, 0, 0.2)' : 'transparent';
+
+  // Mood-based image opacity (sad/sleepy Chester is slightly dimmed)
+  const imageOpacity = chester.mood === 'sad' ? 0.7 : chester.mood === 'sleepy' ? 0.8 : 1;
 
   return (
     <View style={styles.container}>
       {/* Golden aura for champion/golden stages */}
       {(stage === 'golden' || stage === 'champion') && (
-        <View style={[styles.aura, { width: dimensions + 24, height: dimensions + 24, backgroundColor: glowColor }]} />
+        <View style={[styles.aura, {
+          width: dimensions + 28,
+          height: dimensions + 28,
+          borderRadius: (dimensions + 28) / 2,
+          backgroundColor: glowColor,
+        }]} />
       )}
 
-      {/* Dog body */}
-      <View style={[styles.dogBody, { width: dimensions, height: dimensions }]}>
-        {/* Ears */}
-        <View style={[
-          styles.ear,
-          styles.leftEar,
-          { width: earSize, height: earSize * 1.5, left: dimensions * 0.1 },
-          earDroop && { transform: [{ rotate: '-40deg' }], top: 5 },
-        ]} />
-        <View style={[
-          styles.ear,
-          styles.rightEar,
-          { width: earSize, height: earSize * 1.5, right: dimensions * 0.1 },
-          earDroop && { transform: [{ rotate: '40deg' }], top: 5 },
-        ]} />
-
-        {/* Face */}
-        <View style={[styles.face, {
-          width: dimensions * 0.85,
-          height: dimensions * 0.85,
+      <Animated.View style={{
+        transform: [
+          { scale: breatheAnim },
+          { translateY: bounceAnim },
+        ],
+      }}>
+        {/* Dog image container */}
+        <View style={[styles.imageContainer, {
+          width: dimensions,
+          height: dimensions,
+          borderRadius: dimensions / 2,
           borderColor,
-          borderWidth: stage === 'golden' ? 4 : 3,
+          borderWidth,
         }]}>
-          <Text style={[styles.faceText, { fontSize }]}>
-            {stageInfo.emoji.split(/\s/)[stage === 'champion' || stage === 'golden' ? 1 : 0] || stageInfo.emoji}
-          </Text>
-          {/* Crown for golden chester */}
-          {stage === 'golden' && size !== 'small' && (
-            <Text style={styles.crown}>👑</Text>
+          <Image
+            source={CHESTER_IMAGE}
+            style={[styles.chesterImage, {
+              width: imageSize,
+              height: imageSize,
+              opacity: imageOpacity,
+            }]}
+            resizeMode="cover"
+          />
+
+          {/* Sleepy overlay */}
+          {chester.mood === 'sleepy' && (
+            <View style={styles.sleepyOverlay}>
+              <Text style={styles.sleepyEmoji}>💤</Text>
+            </View>
           )}
+
+          {/* Hungry indicator */}
+          {chester.mood === 'hungry' && size !== 'small' && (
+            <View style={styles.hungryBadge}>
+              <Text style={styles.hungryEmoji}>🍖</Text>
+            </View>
+          )}
+
+          {/* Crown for golden Chester */}
+          {stage === 'golden' && (
+            <View style={styles.crownContainer}>
+              <Text style={[styles.crown, { fontSize: size === 'small' ? 16 : size === 'medium' ? 22 : 28 }]}>👑</Text>
+            </View>
+          )}
+
           {/* Medal for champion */}
-          {stage === 'champion' && size !== 'small' && (
-            <Text style={styles.medal}>🏅</Text>
+          {stage === 'champion' && (
+            <View style={styles.medalContainer}>
+              <Text style={[styles.medal, { fontSize: size === 'small' ? 14 : size === 'medium' ? 18 : 22 }]}>🏅</Text>
+            </View>
           )}
         </View>
-      </View>
+
+        {/* Mood indicator dot */}
+        {size !== 'small' && (
+          <View style={[styles.moodDot, { backgroundColor: MOOD_COLORS[chester.mood] }]} />
+        )}
+      </Animated.View>
 
       {showInfo && (
         <View style={styles.info}>
           <Text style={styles.name}>Chester</Text>
           <Text style={[styles.stageBadge, { color: stageInfo.color }]}>{stageInfo.name}</Text>
-          <Text style={styles.mood}>{MOOD_LABELS[chester.mood]}</Text>
+          <Text style={[styles.mood, { color: MOOD_COLORS[chester.mood] }]}>{MOOD_LABELS[chester.mood]}</Text>
 
           {/* Health bar */}
           <View style={styles.healthRow}>
@@ -103,20 +158,34 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
                 backgroundColor: chester.health > 60 ? Colors.success : chester.health > 30 ? Colors.warning : Colors.error,
               }]} />
             </View>
+            <Text style={styles.healthValue}>{chester.health}</Text>
           </View>
 
           {/* XP and level */}
           <View style={styles.levelRow}>
             <Text style={styles.level}>Lv.{chester.level}</Text>
             <View style={styles.xpBar}>
-              <View style={[styles.xpFill, { width: `${(chester.xp / (chester.level * 100)) * 100}%` }]} />
+              <View style={[styles.xpFill, { width: `${Math.min((chester.xp / (chester.level * 100)) * 100, 100)}%` }]} />
             </View>
+            <Text style={styles.xpText}>{chester.xp}/{chester.level * 100}</Text>
           </View>
+
           {chester.streak > 0 && (
-            <Text style={styles.streak}>
-              {chester.streak} day streak! 🔥
-              {chester.streak >= 7 ? ` (${getStreakMultiplier(chester.streak)}x XP)` : ''}
-            </Text>
+            <View style={styles.streakRow}>
+              <Text style={styles.streakFire}>🔥</Text>
+              <Text style={styles.streak}>
+                {chester.streak} day streak
+                {chester.streak >= 7 ? ` (${getStreakMultiplier(chester.streak)}x XP)` : ''}
+              </Text>
+            </View>
+          )}
+
+          {/* Coins display */}
+          {chester.coins > 0 && (
+            <View style={styles.coinsRow}>
+              <Text style={styles.coinsIcon}>🪙</Text>
+              <Text style={styles.coinsText}>{chester.coins} coins</Text>
+            </View>
           )}
         </View>
       )}
@@ -137,52 +206,66 @@ const styles = StyleSheet.create({
   },
   aura: {
     position: 'absolute',
-    borderRadius: 999,
-    top: -12,
+    top: -14,
   },
-  dogBody: {
+  imageContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
-  },
-  ear: {
-    position: 'absolute',
-    top: -5,
-    backgroundColor: '#D2691E',
-    borderRadius: 12,
-    transform: [{ rotate: '-15deg' }],
-  },
-  leftEar: {
-    transform: [{ rotate: '-20deg' }],
-  },
-  rightEar: {
-    transform: [{ rotate: '20deg' }],
-  },
-  face: {
-    backgroundColor: '#FFF3E0',
-    borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: Colors.primary,
+    overflow: 'hidden',
+    backgroundColor: '#FFF8F0',
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  faceText: {
-    textAlign: 'center',
+  chesterImage: {
+    borderRadius: 999,
+  },
+  sleepyOverlay: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+  },
+  sleepyEmoji: {
+    fontSize: 20,
+  },
+  hungryBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    padding: 2,
+  },
+  hungryEmoji: {
+    fontSize: 16,
+  },
+  crownContainer: {
+    position: 'absolute',
+    top: -6,
+    alignItems: 'center',
   },
   crown: {
+    textAlign: 'center',
+  },
+  medalContainer: {
     position: 'absolute',
-    top: -20,
-    fontSize: 24,
+    bottom: -2,
+    alignItems: 'center',
   },
   medal: {
+    textAlign: 'center',
+  },
+  moodDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#fff',
     position: 'absolute',
-    bottom: -8,
-    fontSize: 20,
+    bottom: 4,
+    right: 4,
   },
   info: {
     alignItems: 'center',
@@ -200,7 +283,7 @@ const styles = StyleSheet.create({
   },
   mood: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    fontWeight: '500',
     marginTop: 2,
   },
   healthRow: {
@@ -223,11 +306,16 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: BorderRadius.full,
   },
+  healthValue: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
   levelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: Spacing.xs,
-    gap: Spacing.sm,
+    gap: 6,
   },
   level: {
     fontSize: FontSize.sm,
@@ -235,7 +323,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   xpBar: {
-    width: 80,
+    width: 70,
     height: 8,
     backgroundColor: Colors.border,
     borderRadius: BorderRadius.full,
@@ -246,10 +334,37 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.full,
   },
+  xpText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+    gap: 4,
+  },
+  streakFire: {
+    fontSize: 14,
+  },
   streak: {
     fontSize: FontSize.xs,
     color: Colors.primaryDark,
     fontWeight: '600',
-    marginTop: Spacing.xs,
+  },
+  coinsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  coinsIcon: {
+    fontSize: 14,
+  },
+  coinsText: {
+    fontSize: FontSize.xs,
+    color: '#B8860B',
+    fontWeight: '600',
   },
 });

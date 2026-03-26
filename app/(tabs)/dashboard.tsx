@@ -1,18 +1,19 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
-import { getWeekLogs, getProfile } from '../../services/storage';
+import { getWeekLogs, getProfile, getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
 import { DailyLog, ChesterState, UserGoals } from '../../types';
 
+const CHESTER_IMAGE = require('../../assets/chester/chester-happy.png');
+
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CHART_WIDTH = SCREEN_WIDTH - Spacing.lg * 2 - Spacing.lg * 2;
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function DashboardScreen() {
   const [weekLogs, setWeekLogs] = useState<DailyLog[]>([]);
-  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [], coins: 0 });
+  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [], coins: 0, previousStreak: 0 });
   const [goals, setGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
 
   useFocusEffect(useCallback(() => {
@@ -33,6 +34,9 @@ export default function DashboardScreen() {
     : 0;
   const totalMeals = weekLogs.reduce((s, l) => s + l.items.length, 0);
   const maxCalories = Math.max(...weekLogs.map(l => l.totalCalories), goals.dailyCalories);
+
+  const stage = getChesterLifeStage(chester.level);
+  const stageInfo = LIFE_STAGE_INFO[stage];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,13 +130,24 @@ export default function DashboardScreen() {
         <View style={styles.chesterCard}>
           <Text style={styles.chartTitle}>Chester's Status</Text>
           <View style={styles.chesterRow}>
-            <Text style={styles.chesterEmoji}>🐶</Text>
+            <View style={styles.chesterImageContainer}>
+              <Image
+                source={CHESTER_IMAGE}
+                style={styles.chesterImage}
+                resizeMode="cover"
+              />
+            </View>
             <View style={styles.chesterInfo}>
               <Text style={styles.chesterLevel}>Level {chester.level}</Text>
+              <Text style={[styles.chesterStage, { color: stageInfo.color }]}>{stageInfo.name}</Text>
               <View style={styles.xpBar}>
-                <View style={[styles.xpFill, { width: `${(chester.xp / (chester.level * 100)) * 100}%` }]} />
+                <View style={[styles.xpFill, { width: `${Math.min((chester.xp / (chester.level * 100)) * 100, 100)}%` }]} />
               </View>
               <Text style={styles.chesterXp}>{chester.xp} / {chester.level * 100} XP</Text>
+              <View style={styles.chesterMetaRow}>
+                <Text style={styles.chesterMeta}>❤️ {chester.health}</Text>
+                <Text style={styles.chesterMeta}>🪙 {chester.coins}</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -145,7 +160,7 @@ function MacroAvg({ label, value, goal, color }: { label: string; value: number;
   const pct = goal > 0 ? Math.min(value / goal, 1) : 0;
   return (
     <View style={styles.macroAvgItem}>
-      <View style={styles.macroRing}>
+      <View style={[styles.macroRing, { borderColor: color + '30' }]}>
         <Text style={[styles.macroRingValue, { color }]}>{Math.round(pct * 100)}%</Text>
       </View>
       <Text style={styles.macroAvgValue}>{value}g</Text>
@@ -187,7 +202,7 @@ const styles = StyleSheet.create({
   legendText: { fontSize: FontSize.xs, color: Colors.textSecondary },
   macroAvgRow: { flexDirection: 'row', justifyContent: 'space-around' },
   macroAvgItem: { alignItems: 'center' },
-  macroRing: { width: 64, height: 64, borderRadius: 32, borderWidth: 4, borderColor: Colors.border, justifyContent: 'center', alignItems: 'center' },
+  macroRing: { width: 64, height: 64, borderRadius: 32, borderWidth: 4, justifyContent: 'center', alignItems: 'center' },
   macroRingValue: { fontSize: FontSize.md, fontWeight: '700' },
   macroAvgValue: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text, marginTop: Spacing.xs },
   macroAvgLabel: { fontSize: FontSize.xs, color: Colors.textSecondary },
@@ -197,10 +212,18 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 2,
   },
   chesterRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  chesterEmoji: { fontSize: 48 },
+  chesterImageContainer: {
+    width: 64, height: 64, borderRadius: 32,
+    overflow: 'hidden', borderWidth: 2, borderColor: Colors.primary,
+    backgroundColor: '#FFF8F0',
+  },
+  chesterImage: { width: '100%', height: '100%' },
   chesterInfo: { flex: 1 },
   chesterLevel: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text },
+  chesterStage: { fontSize: FontSize.xs, fontWeight: '600', marginTop: 2 },
   xpBar: { height: 12, backgroundColor: Colors.border, borderRadius: BorderRadius.full, overflow: 'hidden', marginVertical: Spacing.xs },
   xpFill: { height: '100%', backgroundColor: Colors.primary, borderRadius: BorderRadius.full },
   chesterXp: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  chesterMetaRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xs },
+  chesterMeta: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.textSecondary },
 });

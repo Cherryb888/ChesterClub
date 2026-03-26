@@ -309,9 +309,15 @@ export default function ScannerScreen() {
         <View style={styles.previewContainer}>
           {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
           <View style={styles.loadingOverlay}>
+            <View style={styles.loadingChester}>
+              <Image
+                source={require('../../assets/chester/chester-happy.png')}
+                style={styles.loadingChesterImage}
+                resizeMode="cover"
+              />
+            </View>
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>Chester is sniffing your food...</Text>
-            <Text style={styles.loadingEmoji}>🐕‍🦺</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -468,7 +474,12 @@ const styles = StyleSheet.create({
   previewImage: { width: '100%', height: '60%', resizeMode: 'cover' },
   loadingOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
   loadingText: { fontSize: FontSize.lg, fontWeight: '600', color: Colors.text },
-  loadingEmoji: { fontSize: 48 },
+  loadingChester: {
+    width: 80, height: 80, borderRadius: 40,
+    overflow: 'hidden', borderWidth: 2, borderColor: Colors.primary,
+    backgroundColor: '#FFF8F0', marginBottom: Spacing.md,
+  },
+  loadingChesterImage: { width: '100%', height: '100%' },
   // Results
   resultScroll: { padding: Spacing.lg, paddingBottom: 100 },
   resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },

@@ -659,3 +659,117 @@ export async function getMealPlan(): Promise<MealPlan | null> {
   const data = await AsyncStorage.getItem(KEYS.MEAL_PLAN);
   return data ? JSON.parse(data) : null;
 }
+
+// ─── Weight Tracking ───
+
+export interface WeightEntry {
+  date: string;
+  weight: number;
+  unit: 'kg' | 'lbs';
+}
+
+export async function addWeightEntry(weight: number, unit: 'kg' | 'lbs' = 'kg'): Promise<void> {
+  const profile = await getProfile();
+  const today = getTodayKey();
+
+  // Remove existing entry for today if any
+  profile.weightHistory = profile.weightHistory.filter(e => e.date !== today);
+  profile.weightHistory.push({ date: today, weight });
+
+  // Sort by date descending
+  profile.weightHistory.sort((a, b) => b.date.localeCompare(a.date));
+
+  await saveProfile(profile);
+}
+
+export async function getWeightHistory(): Promise<{ date: string; weight: number }[]> {
+  const profile = await getProfile();
+  return profile.weightHistory.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export async function deleteWeightEntry(date: string): Promise<void> {
+  const profile = await getProfile();
+  profile.weightHistory = profile.weightHistory.filter(e => e.date !== date);
+  await saveProfile(profile);
+}
+
+// ─── Settings / Preferences ───
+
+const SETTINGS_KEY = 'app_settings';
+
+export interface AppSettings {
+  mealReminders: boolean;
+  waterReminders: boolean;
+  streakWarnings: boolean;
+  weightUnit: 'kg' | 'lbs';
+  reminderTimes: {
+    breakfast: string; // HH:MM
+    lunch: string;
+    dinner: string;
+  };
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  mealReminders: true,
+  waterReminders: true,
+  streakWarnings: true,
+  weightUnit: 'kg',
+  reminderTimes: {
+    breakfast: '08:00',
+    lunch: '12:00',
+    dinner: '18:00',
+  },
+};
+
+export async function getSettings(): Promise<AppSettings> {
+  const data = await AsyncStorage.getItem(SETTINGS_KEY);
+  if (data) {
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+  }
+  return DEFAULT_SETTINGS;
+}
+
+export async function saveSettings(settings: AppSettings): Promise<void> {
+  await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+// ─── Data Export ───
+
+export async function exportAllData(): Promise<string> {
+  const profile = await getProfile();
+  const settings = await getSettings();
+  const recentFoods = await getRecentFoods();
+  const mealPlan = await getMealPlan();
+  const challenges = await getChallengesState();
+
+  // Gather all food logs
+  const keys = await AsyncStorage.getAllKeys();
+  const logKeys = keys.filter(k => k.startsWith(KEYS.LOG_PREFIX));
+  const waterKeys = keys.filter(k => k.startsWith(KEYS.WATER_PREFIX));
+
+  const foodLogs: Record<string, DailyLog> = {};
+  for (const key of logKeys) {
+    const data = await AsyncStorage.getItem(key);
+    if (data) foodLogs[key.replace(KEYS.LOG_PREFIX, '')] = JSON.parse(data);
+  }
+
+  const waterLogs: Record<string, WaterLog> = {};
+  for (const key of waterKeys) {
+    const data = await AsyncStorage.getItem(key);
+    if (data) waterLogs[key.replace(KEYS.WATER_PREFIX, '')] = JSON.parse(data);
+  }
+
+  const exportData = {
+    exportDate: new Date().toISOString(),
+    version: '1.0.0',
+    profile,
+    settings,
+    foodLogs,
+    waterLogs,
+    recentFoods,
+    mealPlan,
+    challenges,
+  };
+
+  return JSON.stringify(exportData, null, 2);
+}
