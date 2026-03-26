@@ -158,6 +158,9 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <Text style={styles.header}>ChesterClub</Text>
         <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/insights')}>
+            <Ionicons name="bulb-outline" size={24} color={Colors.textSecondary} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
             <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
           </TouchableOpacity>

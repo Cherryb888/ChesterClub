@@ -115,6 +115,10 @@ export default function TabLayout() {
         name="favorites"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="insights"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
