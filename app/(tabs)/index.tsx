@@ -328,6 +328,10 @@ export default function HomeScreen() {
         {/* Club Header */}
         <View style={styles.clubHeader}>
           <Text style={styles.clubTitle}>The Club</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/friends')} style={styles.shopBtn}>
+            <Ionicons name="people" size={18} color={Colors.primary} />
+            <Text style={styles.shopBtnText}>Friends</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/shop')} style={styles.shopBtn}>
             <Ionicons name="bag-handle" size={18} color={Colors.primary} />
             <Text style={styles.shopBtnText}>Shop</Text>

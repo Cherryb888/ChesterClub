@@ -119,6 +119,10 @@ export default function TabLayout() {
         name="insights"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="friends"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
