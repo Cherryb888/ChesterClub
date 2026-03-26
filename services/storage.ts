@@ -32,7 +32,91 @@ const KEYS = {
   MEAL_PLAN: 'current_meal_plan',
   WATER_PREFIX: 'water_log_',
   CHALLENGES: 'challenges_state',
+  SCHEMA_VERSION: 'schema_version',
 };
+
+// ─── Schema Versioning & Migration ───
+//
+// CURRENT_SCHEMA_VERSION should be bumped whenever the data shape changes.
+// Add a new case to runMigrations() for each version bump.
+//
+// History:
+//   1 - Initial MVP (food logs, basic chester)
+//   2 - Added health, achievements, coins to Chester
+//   3 - Added water tracking, challenges, premium
+//   4 - Added previousStreak, weight history
+//   5 - Added settings, data export, cloud sync (Phase 2)
+
+const CURRENT_SCHEMA_VERSION = 5;
+
+export async function runMigrations(): Promise<void> {
+  const raw = await AsyncStorage.getItem(KEYS.SCHEMA_VERSION);
+  const currentVersion = raw ? parseInt(raw, 10) : 0;
+
+  if (currentVersion >= CURRENT_SCHEMA_VERSION) return;
+
+  // Get existing profile (if any) for migration
+  const profileData = await AsyncStorage.getItem(KEYS.PROFILE);
+  if (!profileData) {
+    // No profile yet — fresh install, just set version
+    await AsyncStorage.setItem(KEYS.SCHEMA_VERSION, String(CURRENT_SCHEMA_VERSION));
+    return;
+  }
+
+  const profile = JSON.parse(profileData);
+  let migrated = false;
+
+  // v0/v1 → v2: Add chester health, achievements, coins
+  if (currentVersion < 2) {
+    if (profile.chester) {
+      if (profile.chester.health === undefined) profile.chester.health = 70;
+      if (!profile.chester.achievements) profile.chester.achievements = [];
+      if (profile.chester.coins === undefined) profile.chester.coins = 0;
+    }
+    migrated = true;
+  }
+
+  // v2 → v3: Add water goals, challenges, premium flag
+  if (currentVersion < 3) {
+    if (profile.goals && profile.goals.dailyWaterGlasses === undefined) {
+      profile.goals.dailyWaterGlasses = 8;
+    }
+    if (profile.isPremiumMax === undefined) profile.isPremiumMax = false;
+    migrated = true;
+  }
+
+  // v3 → v4: Add previousStreak, weight history
+  if (currentVersion < 4) {
+    if (profile.chester && profile.chester.previousStreak === undefined) {
+      profile.chester.previousStreak = 0;
+    }
+    if (!profile.weightHistory) profile.weightHistory = [];
+    migrated = true;
+  }
+
+  // v4 → v5: Ensure all fields present for cloud sync compatibility
+  if (currentVersion < 5) {
+    if (!profile.uid) profile.uid = 'local_user';
+    if (!profile.email) profile.email = '';
+    if (!profile.displayName) profile.displayName = 'Friend';
+    if (!profile.goals) profile.goals = DEFAULT_GOALS;
+    if (!profile.chester) profile.chester = DEFAULT_CHESTER;
+    if (profile.createdAt === undefined) profile.createdAt = Date.now();
+    if (profile.onboardingComplete === undefined) profile.onboardingComplete = false;
+    migrated = true;
+  }
+
+  // Save migrated profile and update version
+  if (migrated) {
+    await AsyncStorage.setItem(KEYS.PROFILE, JSON.stringify(profile));
+  }
+  await AsyncStorage.setItem(KEYS.SCHEMA_VERSION, String(CURRENT_SCHEMA_VERSION));
+}
+
+export async function getSchemaVersion(): Promise<number> {
+  const raw = await AsyncStorage.getItem(KEYS.SCHEMA_VERSION);
+  return raw ? parseInt(raw, 10) : 0;
+}
 
 // ─── Profile ───
 
@@ -61,13 +145,17 @@ export async function getProfile(): Promise<UserProfile> {
   const data = await AsyncStorage.getItem(KEYS.PROFILE);
   if (data) {
     const profile = JSON.parse(data);
-    // Migrate old profiles missing new fields
+    // Ensure all fields exist (defensive — migrations should handle this,
+    // but this protects against edge cases like cloud-pulled data)
+    if (!profile.chester) profile.chester = DEFAULT_CHESTER;
     if (profile.chester.health === undefined) profile.chester.health = 70;
     if (!profile.chester.achievements) profile.chester.achievements = [];
     if (profile.chester.coins === undefined) profile.chester.coins = 0;
+    if (!profile.goals) profile.goals = DEFAULT_GOALS;
     if (profile.goals.dailyWaterGlasses === undefined) profile.goals.dailyWaterGlasses = 8;
     if (profile.isPremiumMax === undefined) profile.isPremiumMax = false;
     if (profile.chester.previousStreak === undefined) profile.chester.previousStreak = 0;
+    if (!profile.weightHistory) profile.weightHistory = [];
     return profile;
   }
   const profile: UserProfile = {
