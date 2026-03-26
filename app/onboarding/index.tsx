@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Dimensions, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,9 +10,9 @@ const { width } = Dimensions.get('window');
 
 const PAGES = [
   {
-    emoji: '🐶',
+    emoji: 'chester',
     title: 'Meet Chester!',
-    subtitle: 'Your new food tracking buddy. Chester will help you stay on top of your nutrition!',
+    subtitle: 'Your golden retriever food tracking buddy. Chester will help you stay on top of your nutrition!',
   },
   {
     emoji: '📸',
@@ -92,7 +92,17 @@ export default function OnboardingScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Page content */}
         <View style={styles.content}>
-          <Text style={styles.emoji}>{PAGES[page].emoji}</Text>
+          {PAGES[page].emoji === 'chester' ? (
+            <View style={styles.chesterOnboard}>
+              <Image
+                source={require('../../assets/chester/chester-happy.png')}
+                style={styles.chesterOnboardImage}
+                resizeMode="cover"
+              />
+            </View>
+          ) : (
+            <Text style={styles.emoji}>{PAGES[page].emoji}</Text>
+          )}
           <Text style={styles.title}>{PAGES[page].title}</Text>
           <Text style={styles.subtitle}>{PAGES[page].subtitle}</Text>
 
@@ -211,6 +221,14 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1 },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emoji: { fontSize: 80, marginBottom: Spacing.lg },
+  chesterOnboard: {
+    width: 160, height: 160, borderRadius: 80,
+    overflow: 'hidden', borderWidth: 4, borderColor: Colors.primary,
+    backgroundColor: '#FFF8F0', marginBottom: Spacing.lg,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+  },
+  chesterOnboardImage: { width: '100%', height: '100%' },
   title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.text, textAlign: 'center' },
   subtitle: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.md, lineHeight: 24, paddingHorizontal: Spacing.md },
   form: { width: '100%', marginTop: Spacing.xl },

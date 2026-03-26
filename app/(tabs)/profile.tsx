@@ -1,13 +1,17 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
-import { getProfile, saveProfile } from '../../services/storage';
+import { getProfile, saveProfile, getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
 import { UserProfile, UserGoals } from '../../types';
 
+const CHESTER_IMAGE = require('../../assets/chester/chester-happy.png');
+
 export default function ProfileScreen() {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editing, setEditing] = useState(false);
   const [editGoals, setEditGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
@@ -94,13 +98,43 @@ export default function ProfileScreen() {
         {/* Chester Info */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Chester Stats</Text>
-          <View style={styles.chesterStats}>
-            <StatItem label="Level" value={String(profile.chester.level)} />
-            <StatItem label="XP" value={`${profile.chester.xp}/${profile.chester.level * 100}`} />
-            <StatItem label="Streak" value={`${profile.chester.streak} days`} />
-            <StatItem label="Mood" value={profile.chester.mood} />
-            <StatItem label="Coins" value={`🪙 ${profile.chester.coins}`} />
+          <View style={styles.chesterProfileRow}>
+            <View style={styles.chesterImageSmall}>
+              <Image source={CHESTER_IMAGE} style={styles.chesterImg} resizeMode="cover" />
+            </View>
+            <View style={styles.chesterStats}>
+              <StatItem label="Level" value={String(profile.chester.level)} />
+              <StatItem label="XP" value={`${profile.chester.xp}/${profile.chester.level * 100}`} />
+              <StatItem label="Streak" value={`${profile.chester.streak} days`} />
+              <StatItem label="Mood" value={profile.chester.mood} />
+              <StatItem label="Coins" value={`${profile.chester.coins}`} />
+            </View>
           </View>
+        </View>
+
+        {/* Quick Links */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>More</Text>
+          <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/(tabs)/weight')}>
+            <Ionicons name="trending-down" size={20} color={Colors.primary} />
+            <Text style={styles.linkText}>Weight Tracker</Text>
+            <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/(tabs)/premium')}>
+            <Ionicons name="diamond" size={20} color="#FFD700" />
+            <Text style={styles.linkText}>Premium</Text>
+            {profile.isPremiumMax && (
+              <View style={styles.activePill}>
+                <Text style={styles.activePillText}>Active</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.linkRow, { borderBottomWidth: 0 }]} onPress={() => router.push('/(tabs)/settings')}>
+            <Ionicons name="settings" size={20} color={Colors.textSecondary} />
+            <Text style={styles.linkText}>Settings</Text>
+            <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />
+          </TouchableOpacity>
         </View>
 
         {/* App Info */}
@@ -168,7 +202,23 @@ const styles = StyleSheet.create({
   goalLabel: { flex: 1, fontSize: FontSize.md, color: Colors.text },
   goalValue: { fontSize: FontSize.md, fontWeight: '700' },
   goalInput: { width: 80, fontSize: FontSize.md, fontWeight: '700', color: Colors.primary, textAlign: 'right', borderBottomWidth: 2, borderBottomColor: Colors.primary },
-  chesterStats: { flexDirection: 'row', justifyContent: 'space-around' },
+  chesterProfileRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  chesterImageSmall: {
+    width: 56, height: 56, borderRadius: 28, overflow: 'hidden',
+    borderWidth: 2, borderColor: Colors.primary, backgroundColor: '#FFF8F0',
+  },
+  chesterImg: { width: '100%', height: '100%' },
+  chesterStats: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-around' },
+  linkRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  linkText: { flex: 1, fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
+  activePill: {
+    backgroundColor: Colors.success + '20', paddingHorizontal: Spacing.sm,
+    paddingVertical: 2, borderRadius: BorderRadius.full,
+  },
+  activePillText: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.success },
   statItem: { alignItems: 'center' },
   statValue: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.primary },
   statLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
