@@ -1,6 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeStage, MealPlan, WaterLog, Challenge, ChallengeProgress, ChallengesState } from '../types';
 
+// ─── Background Cloud Sync ───
+// These fire-and-forget to avoid blocking local operations.
+// Imported lazily to avoid circular dependencies.
+
+function backgroundSync(fn: () => Promise<void>) {
+  fn().catch(() => { /* silent fail — offline is fine */ });
+}
+
+function syncProfileBackground() {
+  import('./firestore').then(m => backgroundSync(() => m.syncProfileToCloud()));
+}
+
+function syncFoodLogBackground(date: string) {
+  import('./firestore').then(m => backgroundSync(() => m.syncFoodLogToCloud(date)));
+}
+
+function syncWaterLogBackground(date: string) {
+  import('./firestore').then(m => backgroundSync(() => m.syncWaterLogToCloud(date)));
+}
+
+function syncChallengesBackground() {
+  import('./firestore').then(m => backgroundSync(() => m.syncChallengesToCloud()));
+}
+
 const KEYS = {
   PROFILE: 'user_profile',
   LOG_PREFIX: 'food_log_',
@@ -63,6 +87,7 @@ export async function getProfile(): Promise<UserProfile> {
 
 export async function saveProfile(profile: UserProfile): Promise<void> {
   await AsyncStorage.setItem(KEYS.PROFILE, JSON.stringify(profile));
+  syncProfileBackground();
 }
 
 export async function updateGoals(goals: UserGoals): Promise<void> {
@@ -279,6 +304,7 @@ export async function addWaterGlass(date?: string): Promise<WaterLog> {
     }
   }
   await AsyncStorage.setItem(KEYS.WATER_PREFIX + key, JSON.stringify(log));
+  syncWaterLogBackground(key);
   return log;
 }
 
@@ -318,6 +344,7 @@ export async function addFoodToLog(item: FoodItem, date?: string): Promise<Daily
   log.totalCarbs = log.items.reduce((s, i) => s + i.carbs, 0);
   log.totalFat = log.items.reduce((s, i) => s + i.fat, 0);
   await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
+  syncFoodLogBackground(key);
   return log;
 }
 
@@ -330,6 +357,7 @@ export async function removeFoodFromLog(itemId: string, date?: string): Promise<
   log.totalCarbs = log.items.reduce((s, i) => s + i.carbs, 0);
   log.totalFat = log.items.reduce((s, i) => s + i.fat, 0);
   await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
+  syncFoodLogBackground(key);
   return log;
 }
 
@@ -618,6 +646,7 @@ export async function refreshChallengeProgress(): Promise<void> {
   }
 
   await AsyncStorage.setItem(KEYS.CHALLENGES, JSON.stringify(state));
+  syncChallengesBackground();
 }
 
 // ─── Onboarding ───
