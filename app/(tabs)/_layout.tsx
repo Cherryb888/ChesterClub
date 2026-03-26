@@ -127,6 +127,10 @@ export default function TabLayout() {
         name="leaderboard"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="feed"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
