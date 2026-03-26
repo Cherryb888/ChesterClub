@@ -50,11 +50,36 @@ export interface UserProfile {
   email: string;
   displayName: string;
   goals: UserGoals;
+  dietProfile: DietProfile;
   chester: ChesterState;
   createdAt: number;
   onboardingComplete: boolean;
   weightHistory: { date: string; weight: number; unit: 'kg' | 'lbs' }[];
   isPremiumMax: boolean; // highest tier subscription
+}
+
+// ─── Diet & Health Profile ───
+
+export type DietType = 'no_restriction' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'paleo' | 'mediterranean' | 'halal' | 'kosher';
+export type FitnessGoal = 'lose_weight' | 'maintain' | 'gain_muscle' | 'improve_health';
+export type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
+export type CookingLevel = 'beginner' | 'intermediate' | 'advanced';
+export type MealsPerDay = 3 | 4 | 5 | 6;
+
+export interface DietProfile {
+  gender: Gender;
+  age: number;
+  heightCm: number;
+  currentWeightKg: number;
+  targetWeightKg: number;
+  fitnessGoal: FitnessGoal;
+  dietType: DietType;
+  allergies: string[]; // e.g. ['nuts', 'dairy', 'gluten', 'shellfish', 'eggs', 'soy']
+  dislikedFoods: string[]; // free-text list of foods to avoid
+  cookingLevel: CookingLevel;
+  mealsPerDay: MealsPerDay;
+  maxPrepTimeMinutes: number; // max time per meal in minutes
+  cuisinePreferences: string[]; // e.g. ['italian', 'asian', 'mexican', 'indian']
 }
 
 export interface GeminiFoodResult {

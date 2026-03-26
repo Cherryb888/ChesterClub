@@ -1,4 +1,4 @@
-import { GeminiFoodResult, MealPlanDay, UserGoals } from '../types';
+import { GeminiFoodResult, MealPlanDay, UserGoals, DietProfile } from '../types';
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -140,14 +140,29 @@ Return ONLY valid JSON, no markdown, no code blocks.`;
   return JSON.parse(cleaned) as GeminiFoodResult;
 }
 
-export async function generateMealPlan(goals: UserGoals): Promise<MealPlanDay[]> {
+export async function generateMealPlan(goals: UserGoals, dietProfile?: DietProfile): Promise<MealPlanDay[]> {
+  // Build personalised context from diet profile
+  let profileContext = '';
+  if (dietProfile) {
+    const parts: string[] = [];
+    if (dietProfile.dietType !== 'no_restriction') parts.push(`Diet: ${dietProfile.dietType.replace('_', ' ')}`);
+    if (dietProfile.fitnessGoal) parts.push(`Goal: ${dietProfile.fitnessGoal.replace('_', ' ')}`);
+    if (dietProfile.allergies.length > 0) parts.push(`ALLERGIES (MUST AVOID): ${dietProfile.allergies.join(', ')}`);
+    if (dietProfile.dislikedFoods.length > 0) parts.push(`Dislikes (avoid): ${dietProfile.dislikedFoods.join(', ')}`);
+    if (dietProfile.cuisinePreferences.length > 0) parts.push(`Preferred cuisines: ${dietProfile.cuisinePreferences.join(', ')}`);
+    if (dietProfile.cookingLevel) parts.push(`Cooking skill: ${dietProfile.cookingLevel}`);
+    if (dietProfile.maxPrepTimeMinutes) parts.push(`Max prep time per meal: ${dietProfile.maxPrepTimeMinutes} minutes`);
+    if (dietProfile.mealsPerDay) parts.push(`Meals per day: ${dietProfile.mealsPerDay}`);
+    profileContext = parts.length > 0 ? `\n\nUser profile:\n${parts.map(p => `- ${p}`).join('\n')}` : '';
+  }
+
   const prompt = `You are a meal planning AI for a food tracking app called ChesterClub.
 
 The user has these daily nutrition goals:
 - Calories: ${goals.dailyCalories}
 - Protein: ${goals.dailyProtein}g
 - Carbs: ${goals.dailyCarbs}g
-- Fat: ${goals.dailyFat}g
+- Fat: ${goals.dailyFat}g${profileContext}
 
 Generate a 7-day meal plan. Return a JSON array with 7 objects, one per day. Each day should have breakfast, lunch, dinner, and a snack.
 
@@ -179,8 +194,9 @@ Return this exact JSON structure (array of 7 days):
 Rules:
 - Each day's totals should be close to the user's goals
 - Include varied, realistic, and tasty meals
-- Mix of cuisines and cooking styles
-- Include practical meals that are easy to prepare
+- Respect ALL dietary restrictions and allergies strictly — never include allergens
+- Vary cuisines across the week, favouring preferred cuisines when specified
+- Match recipes to the user's cooking skill level and prep time constraints
 - Keep descriptions brief but appetizing (1 sentence)
 - Return ONLY valid JSON, no markdown, no code blocks`;
 
