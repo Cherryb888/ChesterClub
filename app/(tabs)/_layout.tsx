@@ -111,6 +111,22 @@ export default function TabLayout() {
         name="shop"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="favorites"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="insights"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="friends"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="leaderboard"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

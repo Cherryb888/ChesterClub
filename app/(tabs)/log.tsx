@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getDailyLog, removeFoodFromLog, getTodayKey, getProfile } from '../../services/storage';
+import { addFavorite, isFavorite, removeFavorite, getFavorites, FavoriteFood } from '../../services/favoritesService';
 import { DailyLog, FoodItem, UserGoals } from '../../types';
 
 const MEAL_ICONS: Record<string, string> = {
@@ -18,6 +19,7 @@ const MEAL_ICONS: Record<string, string> = {
 export default function LogScreen() {
   const [log, setLog] = useState<DailyLog | null>(null);
   const [goals, setGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
+  const [favoriteNames, setFavoriteNames] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   const loadLog = useCallback(async () => {
@@ -25,6 +27,8 @@ export default function LogScreen() {
     const profile = await getProfile();
     setLog(todayLog);
     setGoals(profile.goals);
+    const favs = await getFavorites();
+    setFavoriteNames(new Set(favs.map(f => f.name.toLowerCase())));
   }, []);
 
   useFocusEffect(useCallback(() => { loadLog(); }, [loadLog]));
@@ -39,6 +43,19 @@ export default function LogScreen() {
         }
       },
     ]);
+  };
+
+  const toggleFavorite = async (item: FoodItem) => {
+    const isFav = favoriteNames.has(item.name.toLowerCase());
+    if (isFav) {
+      const favs = await getFavorites();
+      const fav = favs.find(f => f.name.toLowerCase() === item.name.toLowerCase());
+      if (fav) await removeFavorite(fav.id);
+    } else {
+      await addFavorite(item);
+    }
+    const favs = await getFavorites();
+    setFavoriteNames(new Set(favs.map(f => f.name.toLowerCase())));
   };
 
   // Group by meal type
@@ -91,18 +108,32 @@ export default function LogScreen() {
                 <Text style={styles.mealTitle}>{meal.charAt(0).toUpperCase() + meal.slice(1)}</Text>
                 <Text style={styles.mealCals}>{mealCals} cal</Text>
               </View>
-              {items.map(item => (
-                <TouchableOpacity key={item.id} style={styles.foodItem} onLongPress={() => deleteItem(item)}>
-                  <View style={styles.foodInfo}>
-                    <Text style={styles.foodName}>{item.name}</Text>
-                    <Text style={styles.foodServing}>{item.servingSize}</Text>
-                  </View>
-                  <View style={styles.foodMacros}>
-                    <Text style={styles.foodCals}>{item.calories} cal</Text>
-                    <Text style={styles.foodMacroDetail}>P:{item.protein}g  C:{item.carbs}g  F:{item.fat}g</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {items.map(item => {
+                const isFav = favoriteNames.has(item.name.toLowerCase());
+                return (
+                  <TouchableOpacity key={item.id} style={styles.foodItem} onLongPress={() => deleteItem(item)}>
+                    <View style={styles.foodInfo}>
+                      <Text style={styles.foodName}>{item.name}</Text>
+                      <Text style={styles.foodServing}>{item.servingSize}</Text>
+                    </View>
+                    <View style={styles.foodMacros}>
+                      <Text style={styles.foodCals}>{item.calories} cal</Text>
+                      <Text style={styles.foodMacroDetail}>P:{item.protein}g  C:{item.carbs}g  F:{item.fat}g</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.favBtn}
+                      onPress={() => toggleFavorite(item)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons
+                        name={isFav ? 'heart' : 'heart-outline'}
+                        size={22}
+                        color={isFav ? Colors.error : Colors.textLight}
+                      />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           );
         })}
@@ -170,6 +201,7 @@ const styles = StyleSheet.create({
   foodMacros: { alignItems: 'flex-end' },
   foodCals: { fontSize: FontSize.md, fontWeight: '700', color: Colors.primary },
   foodMacroDetail: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  favBtn: { paddingLeft: Spacing.sm, justifyContent: 'center' },
   fab: {
     position: 'absolute', bottom: 90, right: 20,
     width: 60, height: 60, borderRadius: 30,

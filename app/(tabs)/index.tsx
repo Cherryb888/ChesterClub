@@ -158,6 +158,9 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <Text style={styles.header}>ChesterClub</Text>
         <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/insights')}>
+            <Ionicons name="bulb-outline" size={24} color={Colors.textSecondary} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
             <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -289,9 +292,9 @@ export default function HomeScreen() {
           <Ionicons name="camera" size={28} color={Colors.surface} />
           <Text style={styles.actionText}>Scan Food</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.secondary }]} onPress={() => router.push('/(tabs)/log')}>
-          <Ionicons name="add-circle" size={28} color={Colors.surface} />
-          <Text style={styles.actionText}>Quick Add</Text>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.secondary }]} onPress={() => router.push('/(tabs)/favorites')}>
+          <Ionicons name="heart" size={28} color={Colors.surface} />
+          <Text style={styles.actionText}>Favorites</Text>
         </TouchableOpacity>
       </View>
 
@@ -325,6 +328,10 @@ export default function HomeScreen() {
         {/* Club Header */}
         <View style={styles.clubHeader}>
           <Text style={styles.clubTitle}>The Club</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/friends')} style={styles.shopBtn}>
+            <Ionicons name="people" size={18} color={Colors.primary} />
+            <Text style={styles.shopBtnText}>Friends</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/shop')} style={styles.shopBtn}>
             <Ionicons name="bag-handle" size={18} color={Colors.primary} />
             <Text style={styles.shopBtnText}>Shop</Text>
@@ -354,6 +361,21 @@ export default function HomeScreen() {
             <Text style={styles.statLabel}>Chester</Text>
           </View>
         </View>
+
+        {/* Leaderboard Button */}
+        <TouchableOpacity
+          style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: Spacing.md }]}
+          onPress={() => router.push('/(tabs)/leaderboard')}
+        >
+          <Text style={{ fontSize: 28 }}>🏆</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardTitle}>Leaderboard</Text>
+            <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: -Spacing.sm }}>
+              Compete with friends on streaks, levels & badges
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
 
         {/* Challenges */}
         <View style={styles.card}>
