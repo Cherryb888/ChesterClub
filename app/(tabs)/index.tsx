@@ -16,11 +16,14 @@ import {
   getMealPlan, calculateNutritionScore,
   getChallengesState, refreshChallengeProgress, claimChallengeReward,
   DAILY_CHALLENGES, WEEKLY_CHALLENGES, MONTHLY_CHALLENGES, ALL_TIME_CHALLENGES,
-  popPendingAchievement,
+  popPendingAchievement, getPendingMilestone, getWeeklyStats,
 } from '../../services/storage';
 import { getChesterDialogue } from '../../services/chesterDialogue';
 import { AchievementDefinition } from '../../constants/achievements';
+import { StreakMilestone } from '../../constants/streakRewards';
 import AchievementUnlockedModal from '../../components/AchievementUnlockedModal';
+import StreakMilestoneModal from '../../components/StreakMilestoneModal';
+import WeeklyRecap from '../../components/WeeklyRecap';
 import { ChesterState, DailyLog, UserGoals, WaterLog, MealPlan, ChallengesState, Challenge, ChallengeProgress } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,7 +32,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const pagerRef = useRef<FlatList>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [], coins: 0, previousStreak: 0 });
+  const [chester, setChester] = useState<ChesterState>({ level: 1, xp: 0, mood: 'happy', streak: 0, lastFedDate: null, outfit: 'default', health: 70, achievements: [], coins: 0, previousStreak: 0, streakShieldActive: false });
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
   const [goals, setGoals] = useState<UserGoals>({ dailyCalories: 2000, dailyProtein: 150, dailyCarbs: 200, dailyFat: 65, dailyWaterGlasses: 8 });
   const [waterLog, setWaterLog] = useState<WaterLog>({ date: '', glasses: 0, goalReached: false });
@@ -41,6 +44,9 @@ export default function HomeScreen() {
   const [challengeTab, setChallengeTab] = useState<'daily' | 'weekly' | 'monthly' | 'all_time'>('daily');
   const [isPremium, setIsPremium] = useState(false);
   const [achievementModal, setAchievementModal] = useState<AchievementDefinition | null>(null);
+  const [milestoneModal, setMilestoneModal] = useState<StreakMilestone | null>(null);
+  const [weeklyRecapVisible, setWeeklyRecapVisible] = useState(false);
+  const [weeklyStats, setWeeklyStats] = useState<any>(null);
 
   const loadData = useCallback(async () => {
     await checkChesterDecay();
@@ -74,6 +80,26 @@ export default function HomeScreen() {
     const pending = await popPendingAchievement();
     if (pending) {
       setAchievementModal(pending);
+    }
+
+    // Show pending streak milestone celebration
+    const milestone = await getPendingMilestone();
+    if (milestone) {
+      // Delay slightly if achievement modal is showing
+      if (pending) {
+        setTimeout(() => setMilestoneModal(milestone), 1500);
+      } else {
+        setMilestoneModal(milestone);
+      }
+    }
+
+    // Show weekly recap on Mondays (day 1) if not already shown today
+    const now = new Date();
+    if (now.getDay() === 1) {
+      const stats = await getWeeklyStats();
+      if (stats.daysLogged > 0) {
+        setWeeklyStats(stats);
+      }
     }
   }, []);
 
@@ -312,7 +338,7 @@ export default function HomeScreen() {
         {/* Stats Summary */}
         <View style={styles.statsGrid}>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{chester.streak}</Text>
+            <Text style={styles.statValue}>{chester.streak}{chester.streakShieldActive ? ' 🛡️' : ''}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
           <View style={styles.statBox}>
@@ -441,6 +467,22 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
 
+        {/* Weekly Recap */}
+        {weeklyStats && (
+          <TouchableOpacity
+            style={[styles.card, { borderWidth: 1, borderColor: Colors.primary + '40' }]}
+            onPress={() => setWeeklyRecapVisible(true)}
+          >
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>Weekly Recap</Text>
+              <Text style={{ fontSize: 20 }}>📊</Text>
+            </View>
+            <Text style={{ fontSize: FontSize.sm, color: Colors.textSecondary }}>
+              Tap to see how your week went!
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Swipe hint */}
         <View style={styles.swipeHint}>
           <Ionicons name="arrow-back" size={16} color={Colors.textLight} />
@@ -487,6 +529,22 @@ export default function HomeScreen() {
           }
         }}
       />
+
+      {/* Streak Milestone Celebration Modal */}
+      <StreakMilestoneModal
+        milestone={milestoneModal}
+        visible={!!milestoneModal}
+        onClose={() => setMilestoneModal(null)}
+      />
+
+      {/* Weekly Recap Modal */}
+      {weeklyStats && (
+        <WeeklyRecap
+          visible={weeklyRecapVisible}
+          stats={weeklyStats}
+          onClose={() => setWeeklyRecapVisible(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

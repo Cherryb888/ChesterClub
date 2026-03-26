@@ -42,6 +42,7 @@ export interface ChesterState {
   achievements: string[];
   coins: number;
   previousStreak: number;
+  streakShieldActive: boolean;
 }
 
 export interface UserProfile {

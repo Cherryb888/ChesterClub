@@ -8,6 +8,7 @@ import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeSt
 import { smartSync } from './syncQueue';
 import { checkAchievements, AchievementCheckContext } from './achievementChecker';
 import { AchievementDefinition } from '../constants/achievements';
+import { getMilestoneForDay, StreakMilestone } from '../constants/streakRewards';
 
 function syncProfileBackground() {
   smartSync({ type: 'profile' }).catch(() => {});
@@ -35,6 +36,7 @@ const KEYS = {
   SCHEMA_VERSION: 'schema_version',
   TOTAL_SCANS: 'total_food_scans',
   PENDING_ACHIEVEMENTS: 'pending_achievement_unlocks',
+  PENDING_MILESTONE: 'pending_streak_milestone',
 };
 
 // ─── Schema Versioning & Migration ───
@@ -49,8 +51,9 @@ const KEYS = {
 //   4 - Added previousStreak, weight history
 //   5 - Added settings, data export, cloud sync (Phase 2)
 //   6 - Added unit field to weight history entries
+//   7 - Added streakShieldActive to Chester state
 
-const CURRENT_SCHEMA_VERSION = 6;
+const CURRENT_SCHEMA_VERSION = 7;
 
 export async function runMigrations(): Promise<void> {
   const raw = await AsyncStorage.getItem(KEYS.SCHEMA_VERSION);
@@ -120,6 +123,14 @@ export async function runMigrations(): Promise<void> {
     migrated = true;
   }
 
+  // v6 → v7: Add streakShieldActive to Chester state
+  if (currentVersion < 7) {
+    if (profile.chester && profile.chester.streakShieldActive === undefined) {
+      profile.chester.streakShieldActive = false;
+    }
+    migrated = true;
+  }
+
   // Save migrated profile and update version
   if (migrated) {
     await AsyncStorage.setItem(KEYS.PROFILE, JSON.stringify(profile));
@@ -153,6 +164,7 @@ const DEFAULT_CHESTER: ChesterState = {
   achievements: [],
   coins: 0,
   previousStreak: 0,
+  streakShieldActive: false,
 };
 
 export async function getProfile(): Promise<UserProfile> {
@@ -169,6 +181,7 @@ export async function getProfile(): Promise<UserProfile> {
     if (profile.goals.dailyWaterGlasses === undefined) profile.goals.dailyWaterGlasses = 8;
     if (profile.isPremiumMax === undefined) profile.isPremiumMax = false;
     if (profile.chester.previousStreak === undefined) profile.chester.previousStreak = 0;
+    if (profile.chester.streakShieldActive === undefined) profile.chester.streakShieldActive = false;
     if (!profile.weightHistory) profile.weightHistory = [];
     return profile;
   }
@@ -276,6 +289,78 @@ async function queuePendingAchievements(achievements: AchievementDefinition[]): 
   await AsyncStorage.setItem(KEYS.PENDING_ACHIEVEMENTS, JSON.stringify([...existing, ...achievements]));
 }
 
+// ─── Streak Milestone Queue ───
+
+export async function getPendingMilestone(): Promise<StreakMilestone | null> {
+  const raw = await AsyncStorage.getItem(KEYS.PENDING_MILESTONE);
+  if (!raw) return null;
+  const milestone = JSON.parse(raw);
+  await AsyncStorage.removeItem(KEYS.PENDING_MILESTONE);
+  return milestone;
+}
+
+async function queueMilestone(milestone: StreakMilestone): Promise<void> {
+  await AsyncStorage.setItem(KEYS.PENDING_MILESTONE, JSON.stringify(milestone));
+}
+
+// ─── Streak Shield ───
+
+export async function activateStreakShield(): Promise<boolean> {
+  const profile = await getProfile();
+  if (profile.chester.streakShieldActive) return false; // already active
+  profile.chester.streakShieldActive = true;
+  await saveProfile(profile);
+  return true;
+}
+
+export function isStreakShieldActive(chester: ChesterState): boolean {
+  return chester.streakShieldActive;
+}
+
+// ─── Weekly Stats ───
+
+export async function getWeeklyStats(): Promise<{
+  totalMeals: number;
+  avgCalories: number;
+  avgNutritionScore: number;
+  waterGoalDays: number;
+  streakCurrent: number;
+  daysLogged: number;
+}> {
+  const profile = await getProfile();
+  const today = new Date();
+  let totalMeals = 0;
+  let totalCalories = 0;
+  let totalScore = 0;
+  let waterGoalDays = 0;
+  let daysLogged = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const log = await getDailyLog(key);
+    const water = await getWaterLog(key);
+
+    if (log.items.length > 0) {
+      daysLogged++;
+      totalMeals += log.items.length;
+      totalCalories += log.totalCalories;
+      totalScore += calculateNutritionScore(log, profile.goals);
+    }
+    if (water.goalReached) waterGoalDays++;
+  }
+
+  return {
+    totalMeals,
+    avgCalories: daysLogged > 0 ? Math.round(totalCalories / daysLogged) : 0,
+    avgNutritionScore: daysLogged > 0 ? Math.round(totalScore / daysLogged) : 0,
+    waterGoalDays,
+    streakCurrent: profile.chester.streak,
+    daysLogged,
+  };
+}
+
 export async function feedChester(foodScore: string): Promise<ChesterState> {
   const profile = await getProfile();
   const today = new Date().toISOString().split('T')[0];
@@ -292,6 +377,13 @@ export async function feedChester(foodScore: string): Promise<ChesterState> {
       chester.streak = 1;
     }
     chester.lastFedDate = today;
+
+    // Check for streak milestone reward
+    const milestone = getMilestoneForDay(chester.streak);
+    if (milestone) {
+      chester.coins += profile.isPremiumMax ? milestone.coins * 2 : milestone.coins;
+      await queueMilestone(milestone);
+    }
   }
 
   // Award XP based on food quality with streak multiplier
@@ -363,12 +455,21 @@ export async function checkChesterDecay(): Promise<ChesterState> {
     const daysSince = Math.floor((Date.now() - lastFed) / 86400000);
 
     if (daysSince >= 2) {
-      const healthLoss = (daysSince - 1) * 10;
-      chester.health = Math.max(0, chester.health - healthLoss);
-      chester.mood = chester.health < 30 ? 'sad' : 'hungry';
-      if (chester.streak > 0) {
-        chester.previousStreak = chester.streak;
-        chester.streak = 0;
+      // Streak shield protects one missed day
+      if (chester.streakShieldActive && daysSince === 2 && chester.streak > 0) {
+        chester.streakShieldActive = false;
+        chester.lastFedDate = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        // Shield consumed — streak preserved, small health loss
+        chester.health = Math.max(0, chester.health - 5);
+        chester.mood = 'neutral';
+      } else {
+        const healthLoss = (daysSince - 1) * 10;
+        chester.health = Math.max(0, chester.health - healthLoss);
+        chester.mood = chester.health < 30 ? 'sad' : 'hungry';
+        if (chester.streak > 0) {
+          chester.previousStreak = chester.streak;
+          chester.streak = 0;
+        }
       }
     }
   }

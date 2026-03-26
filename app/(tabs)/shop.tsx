@@ -18,6 +18,7 @@ const CATEGORY_LABELS: Record<ShopCategory, { label: string; icon: string }> = {
   accessory: { label: 'Accessories', icon: '✨' },
   background: { label: 'Backgrounds', icon: '🖼️' },
   title: { label: 'Titles', icon: '📛' },
+  consumable: { label: 'Items', icon: '🛡️' },
 };
 
 export default function ShopScreen() {
@@ -39,6 +40,30 @@ export default function ShopScreen() {
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
   const handlePurchase = async (item: ShopItem) => {
+    // Consumables are always purchasable (not owned/equipped)
+    if (item.category === 'consumable') {
+      Alert.alert(
+        `Buy ${item.name}?`,
+        `${item.description}\n\nCost: ${item.price} coins. You have ${coins} coins.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: `Buy (${item.price} 🪙)`,
+            onPress: async () => {
+              const result = await purchaseItem(item.id);
+              if (result.success) {
+                Alert.alert('Activated!', `${item.name} is now active! 🛡️`);
+                await loadData();
+              } else {
+                Alert.alert('Cannot Purchase', result.error || 'Something went wrong.');
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     if (owned.includes(item.id)) {
       // Already owned — equip/unequip
       if (equipped[item.category] === item.id) {
@@ -110,8 +135,9 @@ export default function ShopScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.grid}>
           {categoryItems.map(item => {
-            const isOwned = owned.includes(item.id);
-            const isEquipped = equipped[item.category] === item.id;
+            const isConsumable = item.category === 'consumable';
+            const isOwned = !isConsumable && owned.includes(item.id);
+            const isEquipped = !isConsumable && equipped[item.category] === item.id;
             const canAfford = coins >= item.price;
             const needsPremium = item.premium && !isPremium;
 

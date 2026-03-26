@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getShopItemById, ShopCategory } from '../constants/shopItems';
-import { getProfile, saveProfile } from './storage';
+import { getProfile, saveProfile, activateStreakShield } from './storage';
 
 // ─── Shop Service ───
 //
@@ -41,8 +41,8 @@ export async function purchaseItem(itemId: string): Promise<{ success: boolean; 
   const profile = await getProfile();
   const state = await getShopState();
 
-  // Already owned?
-  if (state.ownedItems.includes(itemId)) {
+  // Consumables can be re-purchased; regular items cannot
+  if (item.category !== 'consumable' && state.ownedItems.includes(itemId)) {
     return { success: false, error: 'Already owned' };
   }
 
@@ -56,9 +56,23 @@ export async function purchaseItem(itemId: string): Promise<{ success: boolean; 
     return { success: false, error: 'Not enough coins' };
   }
 
-  // Deduct coins and add to owned
+  // Deduct coins
   profile.chester.coins -= item.price;
   await saveProfile(profile);
+
+  // Consumables trigger effects instead of being stored as owned
+  if (item.category === 'consumable') {
+    if (itemId === 'consumable_streak_shield') {
+      const activated = await activateStreakShield();
+      if (!activated) {
+        // Refund — shield already active
+        profile.chester.coins += item.price;
+        await saveProfile(profile);
+        return { success: false, error: 'Streak shield already active' };
+      }
+    }
+    return { success: true };
+  }
 
   state.ownedItems.push(itemId);
   await saveShopState(state);

@@ -3,7 +3,7 @@
 // Cosmetic items purchasable with coins. Emoji-based for MVP.
 // Categories determine where the cosmetic renders on Chester.
 
-export type ShopCategory = 'hat' | 'accessory' | 'background' | 'title';
+export type ShopCategory = 'hat' | 'accessory' | 'background' | 'title' | 'consumable';
 
 export interface ShopItem {
   id: string;
@@ -184,6 +184,17 @@ export const SHOP_ITEMS: ShopItem[] = [
     category: 'title',
     icon: '🌟',
     premium: true,
+  },
+
+  // ─── Consumables ───
+  {
+    id: 'consumable_streak_shield',
+    name: 'Streak Shield',
+    description: 'Protects your streak if you miss one day. One-time use!',
+    price: 50,
+    category: 'consumable',
+    icon: '🛡️',
+    premium: false,
   },
 ];
 
