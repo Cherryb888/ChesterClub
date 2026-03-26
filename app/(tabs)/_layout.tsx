@@ -111,6 +111,10 @@ export default function TabLayout() {
         name="shop"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="favorites"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

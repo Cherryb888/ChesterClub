@@ -289,9 +289,9 @@ export default function HomeScreen() {
           <Ionicons name="camera" size={28} color={Colors.surface} />
           <Text style={styles.actionText}>Scan Food</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.secondary }]} onPress={() => router.push('/(tabs)/log')}>
-          <Ionicons name="add-circle" size={28} color={Colors.surface} />
-          <Text style={styles.actionText}>Quick Add</Text>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.secondary }]} onPress={() => router.push('/(tabs)/favorites')}>
+          <Ionicons name="heart" size={28} color={Colors.surface} />
+          <Text style={styles.actionText}>Favorites</Text>
         </TouchableOpacity>
       </View>
 
