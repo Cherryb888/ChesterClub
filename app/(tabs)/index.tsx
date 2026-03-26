@@ -362,6 +362,21 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Leaderboard Button */}
+        <TouchableOpacity
+          style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: Spacing.md }]}
+          onPress={() => router.push('/(tabs)/leaderboard')}
+        >
+          <Text style={{ fontSize: 28 }}>🏆</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardTitle}>Leaderboard</Text>
+            <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: -Spacing.sm }}>
+              Compete with friends on streaks, levels & badges
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Challenges */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Challenges</Text>
