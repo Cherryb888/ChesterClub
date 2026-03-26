@@ -103,6 +103,10 @@ export default function TabLayout() {
         name="auth"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="badges"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

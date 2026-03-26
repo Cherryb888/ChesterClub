@@ -6,6 +6,8 @@ import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeSt
 // queues for later when offline.
 
 import { smartSync } from './syncQueue';
+import { checkAchievements, AchievementCheckContext } from './achievementChecker';
+import { AchievementDefinition } from '../constants/achievements';
 
 function syncProfileBackground() {
   smartSync({ type: 'profile' }).catch(() => {});
@@ -31,6 +33,8 @@ const KEYS = {
   WATER_PREFIX: 'water_log_',
   CHALLENGES: 'challenges_state',
   SCHEMA_VERSION: 'schema_version',
+  TOTAL_SCANS: 'total_food_scans',
+  PENDING_ACHIEVEMENTS: 'pending_achievement_unlocks',
 };
 
 // ─── Schema Versioning & Migration ───
@@ -240,6 +244,38 @@ export async function addCoins(amount: number): Promise<number> {
   return finalAmount;
 }
 
+export async function incrementTotalScans(): Promise<number> {
+  const raw = await AsyncStorage.getItem(KEYS.TOTAL_SCANS);
+  const count = (raw ? parseInt(raw, 10) : 0) + 1;
+  await AsyncStorage.setItem(KEYS.TOTAL_SCANS, String(count));
+  return count;
+}
+
+export async function getTotalScans(): Promise<number> {
+  const raw = await AsyncStorage.getItem(KEYS.TOTAL_SCANS);
+  return raw ? parseInt(raw, 10) : 0;
+}
+
+// Queue of achievements to show celebration modals for
+export async function getPendingAchievements(): Promise<AchievementDefinition[]> {
+  const raw = await AsyncStorage.getItem(KEYS.PENDING_ACHIEVEMENTS);
+  return raw ? JSON.parse(raw) : [];
+}
+
+export async function popPendingAchievement(): Promise<AchievementDefinition | null> {
+  const pending = await getPendingAchievements();
+  if (pending.length === 0) return null;
+  const [first, ...rest] = pending;
+  await AsyncStorage.setItem(KEYS.PENDING_ACHIEVEMENTS, JSON.stringify(rest));
+  return first;
+}
+
+async function queuePendingAchievements(achievements: AchievementDefinition[]): Promise<void> {
+  if (achievements.length === 0) return;
+  const existing = await getPendingAchievements();
+  await AsyncStorage.setItem(KEYS.PENDING_ACHIEVEMENTS, JSON.stringify([...existing, ...achievements]));
+}
+
 export async function feedChester(foodScore: string): Promise<ChesterState> {
   const profile = await getProfile();
   const today = new Date().toISOString().split('T')[0];
@@ -285,18 +321,32 @@ export async function feedChester(foodScore: string): Promise<ChesterState> {
     chester.mood = 'neutral';
   }
 
-  // Check achievements
-  const newAchievements = [...chester.achievements];
-  if (!newAchievements.includes('first_scan')) newAchievements.push('first_scan');
-  if (chester.streak >= 7 && !newAchievements.includes('streak_7')) newAchievements.push('streak_7');
-  if (chester.streak >= 30 && !newAchievements.includes('streak_30')) newAchievements.push('streak_30');
-  if (chester.streak >= 60 && !newAchievements.includes('streak_60')) newAchievements.push('streak_60');
-  if (chester.streak >= 90 && !newAchievements.includes('streak_90')) newAchievements.push('streak_90');
-  if (chester.level >= 6 && !newAchievements.includes('young_dog')) newAchievements.push('young_dog');
-  if (chester.level >= 16 && !newAchievements.includes('adult_dog')) newAchievements.push('adult_dog');
-  if (chester.level >= 31 && !newAchievements.includes('champion')) newAchievements.push('champion');
-  if (chester.level >= 50 && !newAchievements.includes('golden')) newAchievements.push('golden');
-  chester.achievements = newAchievements;
+  // Increment scan counter
+  const totalScans = await incrementTotalScans();
+
+  // Check achievements using the achievement checker
+  const todayLog = await getDailyLog(today);
+  const waterLog = await getWaterLog(today);
+  const score = calculateNutritionScore(todayLog, profile.goals);
+
+  const ctx: AchievementCheckContext = {
+    profile: { ...profile, chester },
+    todayLog,
+    waterLog,
+    totalScans,
+    nutritionScore: score,
+  };
+
+  const newlyUnlocked = checkAchievements(ctx);
+  if (newlyUnlocked.length > 0) {
+    for (const achievement of newlyUnlocked) {
+      chester.achievements.push(achievement.id);
+      if (achievement.coinReward > 0) {
+        chester.coins += profile.isPremiumMax ? achievement.coinReward * 2 : achievement.coinReward;
+      }
+    }
+    await queuePendingAchievements(newlyUnlocked);
+  }
 
   profile.chester = chester;
   await saveProfile(profile);
@@ -781,6 +831,19 @@ export async function addRecentFood(item: FoodItem): Promise<void> {
 
 export async function saveMealPlan(plan: MealPlan): Promise<void> {
   await AsyncStorage.setItem(KEYS.MEAL_PLAN, JSON.stringify(plan));
+
+  // Award first_meal_plan achievement if not yet earned
+  const { awardAchievementById } = await import('./achievementChecker');
+  const profile = await getProfile();
+  const achievement = awardAchievementById('first_meal_plan', profile.chester.achievements);
+  if (achievement) {
+    profile.chester.achievements.push(achievement.id);
+    if (achievement.coinReward > 0) {
+      profile.chester.coins += profile.isPremiumMax ? achievement.coinReward * 2 : achievement.coinReward;
+    }
+    await saveProfile(profile);
+    await queuePendingAchievements([achievement]);
+  }
 }
 
 export async function getMealPlan(): Promise<MealPlan | null> {

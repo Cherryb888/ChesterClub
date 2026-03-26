@@ -16,8 +16,11 @@ import {
   getMealPlan, calculateNutritionScore,
   getChallengesState, refreshChallengeProgress, claimChallengeReward,
   DAILY_CHALLENGES, WEEKLY_CHALLENGES, MONTHLY_CHALLENGES, ALL_TIME_CHALLENGES,
+  popPendingAchievement,
 } from '../../services/storage';
 import { getChesterDialogue } from '../../services/chesterDialogue';
+import { AchievementDefinition } from '../../constants/achievements';
+import AchievementUnlockedModal from '../../components/AchievementUnlockedModal';
 import { ChesterState, DailyLog, UserGoals, WaterLog, MealPlan, ChallengesState, Challenge, ChallengeProgress } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -37,6 +40,7 @@ export default function HomeScreen() {
   const [greeting, setGreeting] = useState('Woof! Ready to track some yummy food?');
   const [challengeTab, setChallengeTab] = useState<'daily' | 'weekly' | 'monthly' | 'all_time'>('daily');
   const [isPremium, setIsPremium] = useState(false);
+  const [achievementModal, setAchievementModal] = useState<AchievementDefinition | null>(null);
 
   const loadData = useCallback(async () => {
     await checkChesterDecay();
@@ -65,6 +69,12 @@ export default function HomeScreen() {
       hour: new Date().getHours(),
     });
     setGreeting(dialogue);
+
+    // Show pending achievement unlock celebration
+    const pending = await popPendingAchievement();
+    if (pending) {
+      setAchievementModal(pending);
+    }
   }, []);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
@@ -398,20 +408,34 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {/* Achievements */}
-        {chester.achievements.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Achievements</Text>
+        {/* Badges */}
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/badges')}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Badges</Text>
+            <View style={styles.badgeCountPill}>
+              <Text style={styles.badgeCountText}>{chester.achievements.length}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+          </View>
+          {chester.achievements.length > 0 ? (
             <View style={styles.achievementsGrid}>
-              {chester.achievements.map(a => (
+              {chester.achievements.slice(0, 6).map(a => (
                 <View key={a} style={styles.achievementBadge}>
                   <Text style={styles.achievementIcon}>{getAchievementIcon(a)}</Text>
                   <Text style={styles.achievementLabel}>{getAchievementLabel(a)}</Text>
                 </View>
               ))}
+              {chester.achievements.length > 6 && (
+                <View style={styles.achievementBadge}>
+                  <Text style={styles.achievementIcon}>...</Text>
+                  <Text style={styles.achievementLabel}>More</Text>
+                </View>
+              )}
             </View>
-          </View>
-        )}
+          ) : (
+            <Text style={styles.noBadgesText}>Start tracking to earn badges!</Text>
+          )}
+        </TouchableOpacity>
 
         {/* Swipe hint */}
         <View style={styles.swipeHint}>
@@ -445,6 +469,20 @@ export default function HomeScreen() {
           setCurrentPage(idx);
         }}
       />
+
+      {/* Achievement Celebration Modal */}
+      <AchievementUnlockedModal
+        achievement={achievementModal}
+        visible={!!achievementModal}
+        onClose={async () => {
+          setAchievementModal(null);
+          // Check for more pending achievements
+          const next = await popPendingAchievement();
+          if (next) {
+            setTimeout(() => setAchievementModal(next), 400);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -463,19 +501,15 @@ function MacroStat({ label, value, goal, color, unit }: { label: string; value: 
 }
 
 function getAchievementIcon(id: string): string {
-  const map: Record<string, string> = {
-    first_scan: '📸', streak_7: '🔥', streak_30: '🔥🔥', streak_60: '🔥🔥🔥',
-    streak_90: '💎', young_dog: '🐕', adult_dog: '🦮', champion: '🏆', golden: '👑',
-  };
-  return map[id] || '⭐';
+  const { getAchievementById } = require('../../constants/achievements');
+  const achievement = getAchievementById(id);
+  return achievement?.icon || '⭐';
 }
 
 function getAchievementLabel(id: string): string {
-  const map: Record<string, string> = {
-    first_scan: 'First Scan', streak_7: '7-Day', streak_30: '30-Day', streak_60: '60-Day',
-    streak_90: '90-Day', young_dog: 'Young Dog', adult_dog: 'Adult Dog', champion: 'Champion', golden: 'Golden',
-  };
-  return map[id] || id;
+  const { getAchievementById } = require('../../constants/achievements');
+  const achievement = getAchievementById(id);
+  return achievement?.title || id;
 }
 
 const styles = StyleSheet.create({
@@ -617,4 +651,10 @@ const styles = StyleSheet.create({
   achievementBadge: { alignItems: 'center', width: 70 },
   achievementIcon: { fontSize: 28 },
   achievementLabel: { fontSize: 10, color: Colors.textSecondary, textAlign: 'center', marginTop: 2 },
+  badgeCountPill: {
+    backgroundColor: Colors.primary + '20', paddingHorizontal: Spacing.sm,
+    paddingVertical: 2, borderRadius: BorderRadius.full, marginRight: 'auto', marginLeft: Spacing.sm,
+  },
+  badgeCountText: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.primary },
+  noBadgesText: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center', paddingVertical: Spacing.md },
 });
