@@ -332,6 +332,10 @@ export default function HomeScreen() {
             <Ionicons name="people" size={18} color={Colors.primary} />
             <Text style={styles.shopBtnText}>Friends</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/feed')} style={styles.shopBtn}>
+            <Ionicons name="newspaper-outline" size={18} color={Colors.primary} />
+            <Text style={styles.shopBtnText}>Feed</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/shop')} style={styles.shopBtn}>
             <Ionicons name="bag-handle" size={18} color={Colors.primary} />
             <Text style={styles.shopBtnText}>Shop</Text>
