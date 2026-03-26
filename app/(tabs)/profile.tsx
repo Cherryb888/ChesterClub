@@ -60,6 +60,12 @@ export default function ProfileScreen() {
                 <Text style={styles.profileName}>{profile.displayName || 'Friend'}</Text>
               )}
               <Text style={styles.profileEmail}>{profile.email || 'Local account'}</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/auth')} style={styles.accountLink}>
+                <Text style={styles.accountLinkText}>
+                  {profile.email ? 'Manage Account' : 'Sign In / Create Account'}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -197,6 +203,8 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1 },
   profileName: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text },
   profileEmail: { fontSize: FontSize.sm, color: Colors.textSecondary },
+  accountLink: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.xs },
+  accountLinkText: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.primary },
   nameInput: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, borderBottomWidth: 2, borderBottomColor: Colors.primary, paddingBottom: 4 },
   goalRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.border },
   goalLabel: { flex: 1, fontSize: FontSize.md, color: Colors.text },

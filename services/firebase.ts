@@ -1,6 +1,16 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, sendPasswordResetEmail as firebaseResetPassword, User } from 'firebase/auth';
+import {
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signOut as firebaseSignOut, onAuthStateChanged,
+  sendPasswordResetEmail as firebaseResetPassword,
+  GoogleAuthProvider, OAuthProvider, signInWithCredential,
+  User,
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as AuthSession from 'expo-auth-session';
+import * as Crypto from 'expo-crypto';
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
@@ -24,6 +34,8 @@ if (isConfigured && getApps().length === 0) {
   db = getFirestore(app);
 }
 
+// ─── Email/Password Auth ───
+
 export async function signUp(email: string, password: string) {
   if (!auth) throw new Error('Firebase not configured');
   return createUserWithEmailAndPassword(auth, email, password);
@@ -44,9 +56,83 @@ export async function sendPasswordResetEmail(email: string) {
   return firebaseResetPassword(auth, email);
 }
 
+// ─── Google Sign-In ───
+
+export async function signInWithGoogle() {
+  if (!auth) throw new Error('Firebase not configured');
+
+  // Use Firebase Auth's Google provider via signInWithCredential
+  // For Expo, we use AuthSession to get the Google ID token
+  const redirectUri = AuthSession.makeRedirectUri();
+  const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+
+  if (!clientId) {
+    throw new Error('Google Client ID not configured. Add EXPO_PUBLIC_GOOGLE_CLIENT_ID to .env');
+  }
+
+  const discovery = {
+    authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  };
+
+  const request = new AuthSession.AuthRequest({
+    clientId,
+    redirectUri,
+    scopes: ['openid', 'profile', 'email'],
+    responseType: AuthSession.ResponseType.IdToken,
+  });
+
+  const result = await request.promptAsync(discovery);
+
+  if (result.type !== 'success' || !result.params.id_token) {
+    throw new Error('Google sign-in was cancelled');
+  }
+
+  const credential = GoogleAuthProvider.credential(result.params.id_token);
+  return signInWithCredential(auth, credential);
+}
+
+// ─── Apple Sign-In ───
+
+export async function signInWithApple() {
+  if (!auth) throw new Error('Firebase not configured');
+  if (Platform.OS !== 'ios') throw new Error('Apple Sign-In is only available on iOS');
+
+  const nonce = Math.random().toString(36).substring(2, 10);
+  const hashedNonce = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    nonce
+  );
+
+  const appleCredential = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+      AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    ],
+    nonce: hashedNonce,
+  });
+
+  if (!appleCredential.identityToken) {
+    throw new Error('Apple sign-in failed — no identity token');
+  }
+
+  const provider = new OAuthProvider('apple.com');
+  const credential = provider.credential({
+    idToken: appleCredential.identityToken,
+    rawNonce: nonce,
+  });
+
+  return signInWithCredential(auth, credential);
+}
+
+export function isAppleSignInAvailable(): boolean {
+  return Platform.OS === 'ios';
+}
+
+// ─── Auth State ───
+
 export function onAuthChange(callback: (user: User | null) => void) {
   if (!auth) {
-    // Firebase not configured - run in local-only mode
     callback(null);
     return () => {};
   }
