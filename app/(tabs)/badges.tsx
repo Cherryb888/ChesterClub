@@ -4,14 +4,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
+import ScreenHeader from '../../components/ui/ScreenHeader';
 import { ACHIEVEMENTS, AchievementDefinition, RARITY_COLORS, AchievementRarity } from '../../constants/achievements';
 import { getProfile } from '../../services/storage';
 
 export default function BadgesScreen() {
-  const router = useRouter();
   const [unlocked, setUnlocked] = useState<string[]>([]);
   const [selected, setSelected] = useState<AchievementDefinition | null>(null);
 
@@ -29,12 +27,11 @@ export default function BadgesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.header}>Badges</Text>
-        <Text style={styles.counter}>{unlockedCount}/{ACHIEVEMENTS.length}</Text>
+      <View style={styles.headerWrap}>
+        <ScreenHeader
+          title="Badges"
+          rightElement={<Text style={styles.counter}>{unlockedCount}/{ACHIEVEMENTS.length}</Text>}
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -152,11 +149,7 @@ export default function BadgesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-  },
-  header: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
+  headerWrap: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
   counter: { fontSize: FontSize.md, fontWeight: '700', color: Colors.primary },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
 

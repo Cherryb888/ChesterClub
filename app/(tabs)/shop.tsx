@@ -4,9 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
+import ScreenHeader from '../../components/ui/ScreenHeader';
 import { SHOP_ITEMS, ShopItem, ShopCategory } from '../../constants/shopItems';
 import { getProfile } from '../../services/storage';
 import {
@@ -22,7 +21,7 @@ const CATEGORY_LABELS: Record<ShopCategory, { label: string; icon: string }> = {
 };
 
 export default function ShopScreen() {
-  const router = useRouter();
+
   const [coins, setCoins] = useState(0);
   const [isPremium, setIsPremium] = useState(false);
   const [owned, setOwned] = useState<string[]>([]);
@@ -104,16 +103,15 @@ export default function ShopScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.header}>Chester's Shop</Text>
-        <View style={styles.coinsBadge}>
-          <Text style={styles.coinsIcon}>🪙</Text>
-          <Text style={styles.coinsText}>{coins}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Chester's Shop"
+        rightElement={
+          <View style={styles.coinsBadge}>
+            <Text style={styles.coinsIcon}>🪙</Text>
+            <Text style={styles.coinsText}>{coins}</Text>
+          </View>
+        }
+      />
 
       {/* Category Tabs */}
       <View style={styles.categoryTabs}>
@@ -207,11 +205,6 @@ export default function ShopScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-  },
-  header: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
   coinsBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#FFD700' + '20', paddingHorizontal: Spacing.md,

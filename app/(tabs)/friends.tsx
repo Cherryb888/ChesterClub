@@ -6,13 +6,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getCurrentUser } from '../../services/firebase';
 import {
   getMyFriendCode, getFriendsList, addFriendByCode, removeFriend,
   publishPublicProfile, FriendProfile, getLifeStageEmoji, getMoodEmoji,
 } from '../../services/friendsService';
+import { useRouter } from 'expo-router';
+import ScreenHeader from '../../components/ui/ScreenHeader';
+import EmptyState from '../../components/ui/EmptyState';
+import LoadingScreen from '../../components/ui/LoadingScreen';
 
 export default function FriendsScreen() {
   const [friendCode, setFriendCode] = useState('');
@@ -83,32 +86,26 @@ export default function FriendsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.header}>Friends</Text>
-          <TouchableOpacity onPress={() => setShowAddForm(!showAddForm)}>
-            <Ionicons name={showAddForm ? 'close' : 'person-add'} size={24} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="Friends"
+          rightElement={
+            <TouchableOpacity onPress={() => setShowAddForm(!showAddForm)}>
+              <Ionicons name={showAddForm ? 'close' : 'person-add'} size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          }
+        />
 
         {!isSignedIn ? (
-          /* Not signed in */
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🔒</Text>
-            <Text style={styles.emptyTitle}>Sign In Required</Text>
-            <Text style={styles.emptyText}>
-              Create an account to get your friend code and connect with others!
-            </Text>
-            <TouchableOpacity style={styles.signInBtn} onPress={() => router.push('/(tabs)/auth')}>
-              <Ionicons name="log-in-outline" size={20} color="#fff" />
-              <Text style={styles.signInBtnText}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="🔒"
+            title="Sign In Required"
+            message="Create an account to get your friend code and connect with others!"
+            buttonLabel="Sign In"
+            buttonIcon={<Ionicons name="log-in-outline" size={20} color="#fff" />}
+            onPress={() => router.push('/(tabs)/auth')}
+          />
         ) : loading ? (
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 60 }} />
+          <LoadingScreen />
         ) : (
           <>
             {/* My Friend Code */}
@@ -203,12 +200,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
 
-  headerRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  header: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
-
   // Code Card
   codeCard: {
     backgroundColor: Colors.primary + '12', borderRadius: BorderRadius.lg,
@@ -269,19 +260,6 @@ const styles = StyleSheet.create({
   friendMood: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
 
   // Empty states
-  emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
-  emptyTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, marginBottom: Spacing.sm },
-  emptyText: {
-    fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center',
-    lineHeight: 22, paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg,
-  },
-  signInBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.primary, paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
-  },
-  signInBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '700' },
   emptyFriends: { paddingVertical: Spacing.xl, alignItems: 'center' },
   emptyFriendsText: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: Spacing.lg },
 });

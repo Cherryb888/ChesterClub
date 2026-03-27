@@ -1,15 +1,17 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getCurrentUser } from '../../services/firebase';
 import { getFriendsList, FriendProfile, getLifeStageEmoji } from '../../services/friendsService';
 import { getProfile } from '../../services/storage';
+import ScreenHeader from '../../components/ui/ScreenHeader';
+import EmptyState from '../../components/ui/EmptyState';
+import LoadingScreen from '../../components/ui/LoadingScreen';
 
 type LeaderboardCategory = 'streak' | 'level' | 'badges';
 
@@ -88,14 +90,7 @@ export default function LeaderboardScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.header}>Leaderboard</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <ScreenHeader title="Leaderboard" />
 
         {/* Category Tabs */}
         <View style={styles.tabRow}>
@@ -114,29 +109,23 @@ export default function LeaderboardScreen() {
         </View>
 
         {!isSignedIn ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🏆</Text>
-            <Text style={styles.emptyTitle}>Sign In to Compete</Text>
-            <Text style={styles.emptyText}>
-              Sign in and add friends to see who's on top!
-            </Text>
-            <TouchableOpacity style={styles.signInBtn} onPress={() => router.push('/(tabs)/auth')}>
-              <Text style={styles.signInBtnText}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="🏆"
+            title="Sign In to Compete"
+            message="Sign in and add friends to see who's on top!"
+            buttonLabel="Sign In"
+            onPress={() => router.push('/(tabs)/auth')}
+          />
         ) : loading ? (
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 60 }} />
+          <LoadingScreen />
         ) : entries.length <= 1 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>👥</Text>
-            <Text style={styles.emptyTitle}>Add Friends First</Text>
-            <Text style={styles.emptyText}>
-              Add friends to compete on the leaderboard!
-            </Text>
-            <TouchableOpacity style={styles.signInBtn} onPress={() => router.push('/(tabs)/friends')}>
-              <Text style={styles.signInBtnText}>Add Friends</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="👥"
+            title="Add Friends First"
+            message="Add friends to compete on the leaderboard!"
+            buttonLabel="Add Friends"
+            onPress={() => router.push('/(tabs)/friends')}
+          />
         ) : (
           <>
             {/* Podium for top 3 */}
@@ -205,12 +194,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
 
-  headerRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  header: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
-
   // Tabs
   tabRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
   tab: {
@@ -256,17 +239,4 @@ const styles = StyleSheet.create({
   rankValueFirst: { color: Colors.primary },
   crownEmoji: { fontSize: 16, marginLeft: 4 },
 
-  // Empty
-  emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
-  emptyTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, marginBottom: Spacing.sm },
-  emptyText: {
-    fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center',
-    lineHeight: 22, paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg,
-  },
-  signInBtn: {
-    backgroundColor: Colors.primary, paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
-  },
-  signInBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
 });

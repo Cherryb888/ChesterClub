@@ -1,15 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  RefreshControl,
+  View, Text, StyleSheet, ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getCurrentUser } from '../../services/firebase';
 import { getFriendFeed, FeedItem, FeedItemType } from '../../services/feedService';
+import ScreenHeader from '../../components/ui/ScreenHeader';
+import EmptyState from '../../components/ui/EmptyState';
+import LoadingScreen from '../../components/ui/LoadingScreen';
 
 const TYPE_STYLES: Record<FeedItemType, { bg: string; accent: string }> = {
   meal: { bg: Colors.primary + '10', accent: Colors.primary },
@@ -62,39 +63,26 @@ export default function FeedScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.header}>Activity Feed</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <ScreenHeader title="Activity Feed" />
 
         {!isSignedIn ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📡</Text>
-            <Text style={styles.emptyTitle}>Sign In to See Activity</Text>
-            <Text style={styles.emptyText}>
-              Sign in and add friends to see their milestones and meals!
-            </Text>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/auth')}>
-              <Text style={styles.actionBtnText}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="📡"
+            title="Sign In to See Activity"
+            message="Sign in and add friends to see their milestones and meals!"
+            buttonLabel="Sign In"
+            onPress={() => router.push('/(tabs)/auth')}
+          />
         ) : loading ? (
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 60 }} />
+          <LoadingScreen />
         ) : items.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📭</Text>
-            <Text style={styles.emptyTitle}>No Activity Yet</Text>
-            <Text style={styles.emptyText}>
-              When you or your friends log meals, hit milestones, or unlock achievements, it'll show up here!
-            </Text>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/friends')}>
-              <Text style={styles.actionBtnText}>Add Friends</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="📭"
+            title="No Activity Yet"
+            message="When you or your friends log meals, hit milestones, or unlock achievements, it'll show up here!"
+            buttonLabel="Add Friends"
+            onPress={() => router.push('/(tabs)/friends')}
+          />
         ) : (
           items.map(item => {
             const style = TYPE_STYLES[item.type] || TYPE_STYLES.meal;
@@ -128,12 +116,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
 
-  headerRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  header: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
-
   // Feed card
   feedCard: {
     borderRadius: BorderRadius.lg, padding: Spacing.md,
@@ -151,17 +133,4 @@ const styles = StyleSheet.create({
   feedTitle: { fontSize: FontSize.md, fontWeight: '700', marginBottom: 2 },
   feedSubtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, lineHeight: 20 },
 
-  // Empty
-  emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
-  emptyTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, marginBottom: Spacing.sm },
-  emptyText: {
-    fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center',
-    lineHeight: 22, paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg,
-  },
-  actionBtn: {
-    backgroundColor: Colors.primary, paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
-  },
-  actionBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
 });
