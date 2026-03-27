@@ -1,5 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeStage, MealPlan, WaterLog, Challenge, ChallengeProgress, ChallengesState, DietProfile } from '../types';
+import { recalcLogTotals, calculateNutritionScore } from '../utils/nutrition';
+
+// Re-export so existing imports from storage.ts keep working
+export { calculateNutritionScore } from '../utils/nutrition';
 
 // ─── Background Cloud Sync ───
 // Uses the offline-first sync queue: syncs immediately when online,
@@ -616,10 +620,7 @@ export async function addFoodToLog(item: FoodItem, date?: string): Promise<Daily
   const key = date || getTodayKey();
   const log = await getDailyLog(key);
   log.items.push(item);
-  log.totalCalories = log.items.reduce((s, i) => s + i.calories, 0);
-  log.totalProtein = log.items.reduce((s, i) => s + i.protein, 0);
-  log.totalCarbs = log.items.reduce((s, i) => s + i.carbs, 0);
-  log.totalFat = log.items.reduce((s, i) => s + i.fat, 0);
+  recalcLogTotals(log);
   await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
   syncFoodLogBackground(key);
   return log;
@@ -629,10 +630,7 @@ export async function removeFoodFromLog(itemId: string, date?: string): Promise<
   const key = date || getTodayKey();
   const log = await getDailyLog(key);
   log.items = log.items.filter(i => i.id !== itemId);
-  log.totalCalories = log.items.reduce((s, i) => s + i.calories, 0);
-  log.totalProtein = log.items.reduce((s, i) => s + i.protein, 0);
-  log.totalCarbs = log.items.reduce((s, i) => s + i.carbs, 0);
-  log.totalFat = log.items.reduce((s, i) => s + i.fat, 0);
+  recalcLogTotals(log);
   await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
   syncFoodLogBackground(key);
   return log;
@@ -675,25 +673,6 @@ export async function getTotalMealsLogged(): Promise<number> {
     }
   }
   return total;
-}
-
-// ─── Nutrition Score ───
-
-export function calculateNutritionScore(log: DailyLog, goals: UserGoals): number {
-  if (log.items.length === 0) return 0;
-
-  // Score based on how close to goals (capped at 100% - no bonus for going over)
-  const calRatio = Math.min(log.totalCalories / goals.dailyCalories, 1);
-  const proRatio = Math.min(log.totalProtein / goals.dailyProtein, 1);
-  const carbRatio = Math.min(log.totalCarbs / goals.dailyCarbs, 1);
-  const fatRatio = Math.min(log.totalFat / goals.dailyFat, 1);
-
-  // Penalize going over goal
-  const calOver = log.totalCalories > goals.dailyCalories ? (log.totalCalories - goals.dailyCalories) / goals.dailyCalories : 0;
-  const penalty = Math.min(calOver * 30, 20); // max 20 point penalty for going over
-
-  const rawScore = ((calRatio + proRatio + carbRatio + fatRatio) / 4) * 100;
-  return Math.max(0, Math.round(rawScore - penalty));
 }
 
 // ─── Challenges ───
