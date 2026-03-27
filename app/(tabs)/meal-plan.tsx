@@ -22,12 +22,15 @@ export default function MealPlanScreen() {
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
   const [expandedDay, setExpandedDay] = useState<number>(0);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     loadExistingPlan();
   }, []);
 
   const loadExistingPlan = async () => {
+    const profile = await getProfile();
+    setIsPremium(profile.isPremiumMax);
     const plan = await getMealPlan();
     if (plan) setMealPlan(plan);
     setInitialLoad(false);
@@ -37,7 +40,9 @@ export default function MealPlanScreen() {
     setLoading(true);
     try {
       const profile = await getProfile();
-      const result = await generateMealPlan(profile.goals);
+      // Premium users get fully personalised plans using their diet profile
+      const dietProfile = profile.isPremiumMax ? profile.dietProfile : undefined;
+      const result = await generateMealPlan(profile.goals, dietProfile);
       const plan: MealPlan = {
         id: Date.now().toString(),
         createdAt: Date.now(),
@@ -107,6 +112,24 @@ export default function MealPlanScreen() {
             </View>
           )}
         </TouchableOpacity>
+
+        {/* Premium hint */}
+        {!isPremium && (
+          <View style={styles.premiumHint}>
+            <Text style={{ fontSize: 16 }}>👑</Text>
+            <Text style={styles.premiumHintText}>
+              <Text style={{ fontWeight: '800', color: Colors.primary }}>Premium</Text> members get personalised plans based on diet, allergies, cuisines & cooking level
+            </Text>
+          </View>
+        )}
+        {isPremium && (
+          <View style={[styles.premiumHint, { backgroundColor: '#FFD700' + '15', borderColor: '#FFD700' + '40' }]}>
+            <Text style={{ fontSize: 16 }}>👑</Text>
+            <Text style={[styles.premiumHintText, { color: '#B8860B' }]}>
+              <Text style={{ fontWeight: '800' }}>Personalised plan active</Text> — meals match your diet profile
+            </Text>
+          </View>
+        )}
 
         {!mealPlan && !loading && (
           <View style={styles.emptyState}>
@@ -216,6 +239,13 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
+  premiumHint: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: Colors.primary + '08', borderRadius: BorderRadius.md,
+    padding: Spacing.sm, marginTop: Spacing.sm,
+    borderWidth: 1, borderColor: Colors.primary + '20',
+  },
+  premiumHintText: { flex: 1, fontSize: FontSize.xs, color: Colors.textSecondary, lineHeight: 18 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   generateText: { fontSize: FontSize.md, fontWeight: '700', color: '#fff' },
   emptyState: { alignItems: 'center', paddingVertical: Spacing.xxl },

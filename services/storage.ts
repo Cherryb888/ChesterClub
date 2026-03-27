@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeStage, MealPlan, WaterLog, Challenge, ChallengeProgress, ChallengesState } from '../types';
+import { FoodItem, DailyLog, UserProfile, ChesterState, UserGoals, ChesterLifeStage, MealPlan, WaterLog, Challenge, ChallengeProgress, ChallengesState, DietProfile } from '../types';
 
 // ─── Background Cloud Sync ───
 // Uses the offline-first sync queue: syncs immediately when online,
@@ -52,8 +52,9 @@ const KEYS = {
 //   5 - Added settings, data export, cloud sync (Phase 2)
 //   6 - Added unit field to weight history entries
 //   7 - Added streakShieldActive to Chester state
+//   8 - Added dietProfile to UserProfile
 
-const CURRENT_SCHEMA_VERSION = 7;
+const CURRENT_SCHEMA_VERSION = 8;
 
 export async function runMigrations(): Promise<void> {
   const raw = await AsyncStorage.getItem(KEYS.SCHEMA_VERSION);
@@ -131,6 +132,14 @@ export async function runMigrations(): Promise<void> {
     migrated = true;
   }
 
+  // v7 → v8: Add dietProfile
+  if (currentVersion < 8) {
+    if (!profile.dietProfile) {
+      profile.dietProfile = DEFAULT_DIET_PROFILE;
+    }
+    migrated = true;
+  }
+
   // Save migrated profile and update version
   if (migrated) {
     await AsyncStorage.setItem(KEYS.PROFILE, JSON.stringify(profile));
@@ -151,6 +160,22 @@ const DEFAULT_GOALS: UserGoals = {
   dailyCarbs: 200,
   dailyFat: 65,
   dailyWaterGlasses: 8,
+};
+
+const DEFAULT_DIET_PROFILE: DietProfile = {
+  gender: 'prefer_not_to_say',
+  age: 25,
+  heightCm: 170,
+  currentWeightKg: 70,
+  targetWeightKg: 70,
+  fitnessGoal: 'maintain',
+  dietType: 'no_restriction',
+  allergies: [],
+  dislikedFoods: [],
+  cookingLevel: 'intermediate',
+  mealsPerDay: 3,
+  maxPrepTimeMinutes: 30,
+  cuisinePreferences: [],
 };
 
 const DEFAULT_CHESTER: ChesterState = {
@@ -183,6 +208,7 @@ export async function getProfile(): Promise<UserProfile> {
     if (profile.chester.previousStreak === undefined) profile.chester.previousStreak = 0;
     if (profile.chester.streakShieldActive === undefined) profile.chester.streakShieldActive = false;
     if (!profile.weightHistory) profile.weightHistory = [];
+    if (!profile.dietProfile) profile.dietProfile = DEFAULT_DIET_PROFILE;
     return profile;
   }
   const profile: UserProfile = {
@@ -190,6 +216,7 @@ export async function getProfile(): Promise<UserProfile> {
     email: '',
     displayName: 'Friend',
     goals: DEFAULT_GOALS,
+    dietProfile: DEFAULT_DIET_PROFILE,
     chester: DEFAULT_CHESTER,
     createdAt: Date.now(),
     onboardingComplete: false,

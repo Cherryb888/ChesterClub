@@ -1,11 +1,62 @@
-import { GeminiFoodResult, MealPlanDay, UserGoals } from '../types';
+import { GeminiFoodResult, MealPlanDay, UserGoals, DietProfile } from '../types';
+import { getCurrentUser } from './firebase';
 
+// Cloud Functions base URL — set this to your deployed functions URL
+// For local emulator testing: http://localhost:5001/YOUR_PROJECT_ID/us-central1
+const FUNCTIONS_BASE_URL = process.env.EXPO_PUBLIC_FUNCTIONS_URL || '';
+
+// Fallback: direct Gemini calls when Cloud Functions aren't configured yet
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-// Rate limit tracking
+// Rate limit tracking (for direct mode fallback)
 let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 1000; // 1 second minimum between requests
+const MIN_REQUEST_INTERVAL = 1000;
+
+const useCloudFunctions = !!FUNCTIONS_BASE_URL;
+
+// Safe JSON parser — prevents crashes from malformed AI responses
+function safeJsonParse<T>(text: string, label: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Chester got confused! Could not parse ${label} response. Please try again.`);
+  }
+}
+
+// ─── Auth token helper ───
+
+async function getAuthToken(): Promise<string> {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Not signed in');
+  return user.getIdToken();
+}
+
+// ─── Cloud Functions fetch helper ───
+
+async function callFunction<T>(endpoint: string, body: object): Promise<T> {
+  const token = await getAuthToken();
+  const response = await fetch(`${FUNCTIONS_BASE_URL}/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+    if (response.status === 429) {
+      throw new Error('Chester is taking a quick nap! Too many requests. Try again in a few seconds.');
+    }
+    throw new Error(data.error || `Server error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// ─── Direct Gemini fetch (fallback when functions not deployed) ───
 
 async function throttledFetch(url: string, options: RequestInit): Promise<Response> {
   const now = Date.now();
@@ -17,7 +68,6 @@ async function throttledFetch(url: string, options: RequestInit): Promise<Respon
 
   const response = await fetch(url, options);
 
-  // Handle rate limiting (429)
   if (response.status === 429) {
     const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10);
     await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
@@ -28,7 +78,17 @@ async function throttledFetch(url: string, options: RequestInit): Promise<Respon
   return response;
 }
 
-const FOOD_ANALYSIS_PROMPT = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.
+// ═══════════════════════════════════════════
+// Public API — auto-routes through Cloud Functions or direct Gemini
+// ═══════════════════════════════════════════
+
+export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodResult> {
+  if (useCloudFunctions) {
+    return callFunction<GeminiFoodResult>('analyzeFoodImage', { base64Image });
+  }
+
+  // ── Direct fallback ──
+  const prompt = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.
 
 Analyze this food photo and return a JSON response with this exact structure:
 {
@@ -53,26 +113,17 @@ Rules:
 - chesterReaction should be fun, dog-themed, and encouraging (e.g. "Woof! That salad looks pawsome!" or "Ruff... that's a lot of treats, but I still love you!")
 - Return ONLY valid JSON, no markdown formatting, no code blocks`;
 
-export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodResult> {
   const response = await throttledFetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{
         parts: [
-          { text: FOOD_ANALYSIS_PROMPT },
-          {
-            inline_data: {
-              mime_type: 'image/jpeg',
-              data: base64Image,
-            },
-          },
+          { text: prompt },
+          { inline_data: { mime_type: 'image/jpeg', data: base64Image } },
         ],
       }],
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 1024,
-      },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
     }),
   });
 
@@ -86,16 +137,17 @@ export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodR
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new Error('No response from Gemini API');
-  }
-
+  if (!text) throw new Error('No response from Gemini API');
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned) as GeminiFoodResult;
+  return safeJsonParse<GeminiFoodResult>(cleaned, 'food scan');
 }
 
 export async function analyzeTextFood(description: string): Promise<GeminiFoodResult> {
+  if (useCloudFunctions) {
+    return callFunction<GeminiFoodResult>('analyzeTextFood', { description });
+  }
+
+  // ── Direct fallback ──
   const textPrompt = `You are a nutrition AI for a food tracking app with a dog mascot named Chester.
 
 The user described their food as: "${description}"
@@ -136,18 +188,38 @@ Return ONLY valid JSON, no markdown, no code blocks.`;
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('No response from Gemini API');
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned) as GeminiFoodResult;
+  return safeJsonParse<GeminiFoodResult>(cleaned, 'food analysis');
 }
 
-export async function generateMealPlan(goals: UserGoals): Promise<MealPlanDay[]> {
+export async function generateMealPlan(goals: UserGoals, dietProfile?: DietProfile): Promise<MealPlanDay[]> {
+  if (useCloudFunctions) {
+    return callFunction<MealPlanDay[]>('generateMealPlan', { goals, dietProfile });
+  }
+
+  // ── Direct fallback ──
+  let profileContext = '';
+  if (dietProfile) {
+    const parts: string[] = [];
+    if (dietProfile.dietType !== 'no_restriction') parts.push(`Diet: ${dietProfile.dietType.replace('_', ' ')}`);
+    if (dietProfile.fitnessGoal) parts.push(`Goal: ${dietProfile.fitnessGoal.replace('_', ' ')}`);
+    if (dietProfile.allergies.length > 0) parts.push(`ALLERGIES (MUST AVOID): ${dietProfile.allergies.join(', ')}`);
+    if (dietProfile.dislikedFoods.length > 0) parts.push(`Dislikes (avoid): ${dietProfile.dislikedFoods.join(', ')}`);
+    if (dietProfile.cuisinePreferences.length > 0) parts.push(`Preferred cuisines: ${dietProfile.cuisinePreferences.join(', ')}`);
+    if (dietProfile.cookingLevel) parts.push(`Cooking skill: ${dietProfile.cookingLevel}`);
+    if (dietProfile.maxPrepTimeMinutes) parts.push(`Max prep time per meal: ${dietProfile.maxPrepTimeMinutes} minutes`);
+    if (dietProfile.mealsPerDay) parts.push(`Meals per day: ${dietProfile.mealsPerDay}`);
+    profileContext = parts.length > 0 ? `\n\nUser profile:\n${parts.map(p => `- ${p}`).join('\n')}` : '';
+  }
+
   const prompt = `You are a meal planning AI for a food tracking app called ChesterClub.
 
 The user has these daily nutrition goals:
 - Calories: ${goals.dailyCalories}
 - Protein: ${goals.dailyProtein}g
 - Carbs: ${goals.dailyCarbs}g
-- Fat: ${goals.dailyFat}g
+- Fat: ${goals.dailyFat}g${profileContext}
 
 Generate a 7-day meal plan. Return a JSON array with 7 objects, one per day. Each day should have breakfast, lunch, dinner, and a snack.
 
@@ -179,8 +251,9 @@ Return this exact JSON structure (array of 7 days):
 Rules:
 - Each day's totals should be close to the user's goals
 - Include varied, realistic, and tasty meals
-- Mix of cuisines and cooking styles
-- Include practical meals that are easy to prepare
+- Respect ALL dietary restrictions and allergies strictly — never include allergens
+- Vary cuisines across the week, favouring preferred cuisines when specified
+- Match recipes to the user's cooking skill level and prep time constraints
 - Keep descriptions brief but appetizing (1 sentence)
 - Return ONLY valid JSON, no markdown, no code blocks`;
 
@@ -202,11 +275,7 @@ Rules:
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new Error('No response from Gemini API');
-  }
-
+  if (!text) throw new Error('No response from Gemini API');
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned) as MealPlanDay[];
+  return safeJsonParse<MealPlanDay[]>(cleaned, 'meal plan');
 }
