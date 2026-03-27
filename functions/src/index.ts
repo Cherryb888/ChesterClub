@@ -14,6 +14,33 @@ const getGeminiKey = (): string => {
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
+// ─── Input validation helpers ───
+
+const MAX_DESCRIPTION_LENGTH = 1000;
+const MAX_BASE64_SIZE = 10 * 1024 * 1024; // 10MB
+const VALID_DIET_TYPES = ['no_restriction', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'paleo', 'mediterranean', 'halal', 'kosher'];
+const VALID_FITNESS_GOALS = ['lose_weight', 'maintain', 'gain_muscle', 'improve_health'];
+const VALID_COOKING_LEVELS = ['beginner', 'intermediate', 'advanced'];
+
+function sanitizeString(str: unknown, maxLen: number): string {
+  if (typeof str !== 'string') return '';
+  return str.slice(0, maxLen).replace(/[^\w\s\-.,!?'()]/g, '').trim();
+}
+
+function sanitizeStringArray(arr: unknown, maxItems: number, maxLen: number): string[] {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter((x): x is string => typeof x === 'string')
+    .slice(0, maxItems)
+    .map(x => sanitizeString(x, maxLen));
+}
+
+function validateNumber(val: unknown, min: number, max: number, fallback: number): number {
+  const num = Number(val);
+  if (isNaN(num) || num < min || num > max) return fallback;
+  return Math.round(num);
+}
+
 // ─── Auth helper ───
 
 async function verifyAuth(req: functions.https.Request): Promise<string> {
@@ -85,8 +112,22 @@ async function callGemini(body: object): Promise<any> {
 
 // ─── CORS helper ───
 
-function setCors(res: functions.Response): void {
-  res.set('Access-Control-Allow-Origin', '*');
+// Allowed origins — add your app's domain(s) before production
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:8081',      // Expo dev
+  'http://localhost:19006',     // Expo web
+  'https://chesterclub.app',   // Production — update to your actual domain
+]);
+
+function setCors(req: functions.https.Request, res: functions.Response): void {
+  const origin = req.headers.origin || '';
+  if (ALLOWED_ORIGINS.has(origin)) {
+    res.set('Access-Control-Allow-Origin', origin);
+  }
+  // React Native doesn't send origin header — allow if no origin (mobile app)
+  if (!req.headers.origin) {
+    res.set('Access-Control-Allow-Origin', '*');
+  }
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
@@ -96,7 +137,7 @@ function setCors(res: functions.Response): void {
 // ═══════════════════════════════════════════
 
 export const analyzeFoodImage = functions.https.onRequest(async (req, res) => {
-  setCors(res);
+  setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
@@ -105,8 +146,12 @@ export const analyzeFoodImage = functions.https.onRequest(async (req, res) => {
     checkRateLimit(uid);
 
     const { base64Image } = req.body;
-    if (!base64Image) {
+    if (!base64Image || typeof base64Image !== 'string') {
       res.status(400).json({ error: 'Missing base64Image' });
+      return;
+    }
+    if (base64Image.length > MAX_BASE64_SIZE) {
+      res.status(400).json({ error: 'Image too large (max 10MB)' });
       return;
     }
 
@@ -145,7 +190,7 @@ Rules:
       generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
     });
 
-    res.json(JSON.parse(result));
+    try { res.json(JSON.parse(result)); } catch { res.status(500).json({ error: 'Invalid AI response format' }); }
   } catch (err: any) {
     const status = err.httpErrorCode?.status || 500;
     res.status(status).json({ error: err.message || 'Internal server error' });
@@ -157,7 +202,7 @@ Rules:
 // ═══════════════════════════════════════════
 
 export const analyzeTextFood = functions.https.onRequest(async (req, res) => {
-  setCors(res);
+  setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
@@ -165,9 +210,14 @@ export const analyzeTextFood = functions.https.onRequest(async (req, res) => {
     const uid = await verifyAuth(req);
     checkRateLimit(uid);
 
-    const { description } = req.body;
-    if (!description) {
+    const rawDescription = req.body.description;
+    if (!rawDescription || typeof rawDescription !== 'string') {
       res.status(400).json({ error: 'Missing description' });
+      return;
+    }
+    const description = sanitizeString(rawDescription, MAX_DESCRIPTION_LENGTH);
+    if (!description) {
+      res.status(400).json({ error: 'Invalid description' });
       return;
     }
 
@@ -198,7 +248,7 @@ Return ONLY valid JSON, no markdown, no code blocks.`;
       generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
     });
 
-    res.json(JSON.parse(result));
+    try { res.json(JSON.parse(result)); } catch { res.status(500).json({ error: 'Invalid AI response format' }); }
   } catch (err: any) {
     const status = err.httpErrorCode?.status || 500;
     res.status(status).json({ error: err.message || 'Internal server error' });
@@ -210,7 +260,7 @@ Return ONLY valid JSON, no markdown, no code blocks.`;
 // ═══════════════════════════════════════════
 
 export const generateMealPlan = functions.https.onRequest(async (req, res) => {
-  setCors(res);
+  setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
@@ -219,33 +269,50 @@ export const generateMealPlan = functions.https.onRequest(async (req, res) => {
     checkRateLimit(uid);
 
     const { goals, dietProfile } = req.body;
-    if (!goals) {
+    if (!goals || typeof goals !== 'object') {
       res.status(400).json({ error: 'Missing goals' });
       return;
     }
 
-    // Build personalised context from diet profile
+    // Validate and clamp goal values
+    const safeGoals = {
+      dailyCalories: validateNumber(goals.dailyCalories, 800, 10000, 2000),
+      dailyProtein: validateNumber(goals.dailyProtein, 10, 500, 150),
+      dailyCarbs: validateNumber(goals.dailyCarbs, 10, 800, 250),
+      dailyFat: validateNumber(goals.dailyFat, 10, 400, 65),
+    };
+
+    // Build personalised context from diet profile (sanitised)
     let profileContext = '';
-    if (dietProfile) {
+    if (dietProfile && typeof dietProfile === 'object') {
       const parts: string[] = [];
-      if (dietProfile.dietType !== 'no_restriction') parts.push(`Diet: ${dietProfile.dietType.replace('_', ' ')}`);
-      if (dietProfile.fitnessGoal) parts.push(`Goal: ${dietProfile.fitnessGoal.replace('_', ' ')}`);
-      if (dietProfile.allergies?.length > 0) parts.push(`ALLERGIES (MUST AVOID): ${dietProfile.allergies.join(', ')}`);
-      if (dietProfile.dislikedFoods?.length > 0) parts.push(`Dislikes (avoid): ${dietProfile.dislikedFoods.join(', ')}`);
-      if (dietProfile.cuisinePreferences?.length > 0) parts.push(`Preferred cuisines: ${dietProfile.cuisinePreferences.join(', ')}`);
-      if (dietProfile.cookingLevel) parts.push(`Cooking skill: ${dietProfile.cookingLevel}`);
-      if (dietProfile.maxPrepTimeMinutes) parts.push(`Max prep time per meal: ${dietProfile.maxPrepTimeMinutes} minutes`);
-      if (dietProfile.mealsPerDay) parts.push(`Meals per day: ${dietProfile.mealsPerDay}`);
-      profileContext = parts.length > 0 ? `\n\nUser profile:\n${parts.map(p => `- ${p}`).join('\n')}` : '';
+      const dietType = VALID_DIET_TYPES.includes(dietProfile.dietType) ? dietProfile.dietType : 'no_restriction';
+      const fitnessGoal = VALID_FITNESS_GOALS.includes(dietProfile.fitnessGoal) ? dietProfile.fitnessGoal : 'maintain';
+      const cookingLevel = VALID_COOKING_LEVELS.includes(dietProfile.cookingLevel) ? dietProfile.cookingLevel : 'intermediate';
+      const allergies = sanitizeStringArray(dietProfile.allergies, 20, 50);
+      const dislikedFoods = sanitizeStringArray(dietProfile.dislikedFoods, 30, 50);
+      const cuisinePreferences = sanitizeStringArray(dietProfile.cuisinePreferences, 15, 50);
+      const maxPrepTime = validateNumber(dietProfile.maxPrepTimeMinutes, 5, 180, 30);
+      const mealsPerDay = validateNumber(dietProfile.mealsPerDay, 2, 8, 3);
+
+      if (dietType !== 'no_restriction') parts.push(`Diet: ${dietType.replace('_', ' ')}`);
+      parts.push(`Goal: ${fitnessGoal.replace('_', ' ')}`);
+      if (allergies.length > 0) parts.push(`ALLERGIES (MUST AVOID): ${allergies.join(', ')}`);
+      if (dislikedFoods.length > 0) parts.push(`Dislikes (avoid): ${dislikedFoods.join(', ')}`);
+      if (cuisinePreferences.length > 0) parts.push(`Preferred cuisines: ${cuisinePreferences.join(', ')}`);
+      parts.push(`Cooking skill: ${cookingLevel}`);
+      parts.push(`Max prep time per meal: ${maxPrepTime} minutes`);
+      parts.push(`Meals per day: ${mealsPerDay}`);
+      profileContext = `\n\nUser profile:\n${parts.map(p => `- ${p}`).join('\n')}`;
     }
 
     const prompt = `You are a meal planning AI for a food tracking app called ChesterClub.
 
 The user has these daily nutrition goals:
-- Calories: ${goals.dailyCalories}
-- Protein: ${goals.dailyProtein}g
-- Carbs: ${goals.dailyCarbs}g
-- Fat: ${goals.dailyFat}g${profileContext}
+- Calories: ${safeGoals.dailyCalories}
+- Protein: ${safeGoals.dailyProtein}g
+- Carbs: ${safeGoals.dailyCarbs}g
+- Fat: ${safeGoals.dailyFat}g${profileContext}
 
 Generate a 7-day meal plan. Return a JSON array with 7 objects, one per day. Each day should have breakfast, lunch, dinner, and a snack.
 
@@ -288,7 +355,7 @@ Rules:
       generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
     });
 
-    res.json(JSON.parse(result));
+    try { res.json(JSON.parse(result)); } catch { res.status(500).json({ error: 'Invalid AI response format' }); }
   } catch (err: any) {
     const status = err.httpErrorCode?.status || 500;
     res.status(status).json({ error: err.message || 'Internal server error' });

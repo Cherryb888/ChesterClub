@@ -98,7 +98,8 @@ export async function signInWithApple() {
   if (!auth) throw new Error('Firebase not configured');
   if (Platform.OS !== 'ios') throw new Error('Apple Sign-In is only available on iOS');
 
-  const nonce = Math.random().toString(36).substring(2, 10);
+  const nonceBytes = await Crypto.getRandomBytesAsync(16);
+  const nonce = Array.from(new Uint8Array(nonceBytes)).map(b => b.toString(16).padStart(2, '0')).join('');
   const hashedNonce = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
     nonce

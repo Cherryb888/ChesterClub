@@ -15,6 +15,15 @@ const MIN_REQUEST_INTERVAL = 1000;
 
 const useCloudFunctions = !!FUNCTIONS_BASE_URL;
 
+// Safe JSON parser — prevents crashes from malformed AI responses
+function safeJsonParse<T>(text: string, label: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Chester got confused! Could not parse ${label} response. Please try again.`);
+  }
+}
+
 // ─── Auth token helper ───
 
 async function getAuthToken(): Promise<string> {
@@ -130,7 +139,7 @@ Rules:
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('No response from Gemini API');
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned) as GeminiFoodResult;
+  return safeJsonParse<GeminiFoodResult>(cleaned, 'food scan');
 }
 
 export async function analyzeTextFood(description: string): Promise<GeminiFoodResult> {
@@ -179,8 +188,9 @@ Return ONLY valid JSON, no markdown, no code blocks.`;
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('No response from Gemini API');
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned) as GeminiFoodResult;
+  return safeJsonParse<GeminiFoodResult>(cleaned, 'food analysis');
 }
 
 export async function generateMealPlan(goals: UserGoals, dietProfile?: DietProfile): Promise<MealPlanDay[]> {
@@ -267,5 +277,5 @@ Rules:
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('No response from Gemini API');
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned) as MealPlanDay[];
+  return safeJsonParse<MealPlanDay[]>(cleaned, 'meal plan');
 }

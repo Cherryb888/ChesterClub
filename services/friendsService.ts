@@ -96,6 +96,11 @@ export async function addFriendByCode(code: string): Promise<{ success: boolean;
 
   const normalizedCode = code.toUpperCase().trim();
 
+  // Validate format (XXXX-XXXX, alphanumeric without ambiguous chars)
+  if (!/^[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(normalizedCode)) {
+    return { success: false, error: 'Invalid friend code format. Use format: XXXX-XXXX' };
+  }
+
   // Check if it's own code
   const myCode = await getMyFriendCode();
   if (normalizedCode === myCode) return { success: false, error: "That's your own friend code!" };
