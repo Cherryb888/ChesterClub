@@ -1,11 +1,53 @@
 import { GeminiFoodResult, MealPlanDay, UserGoals, DietProfile } from '../types';
+import { getCurrentUser } from './firebase';
 
+// Cloud Functions base URL — set this to your deployed functions URL
+// For local emulator testing: http://localhost:5001/YOUR_PROJECT_ID/us-central1
+const FUNCTIONS_BASE_URL = process.env.EXPO_PUBLIC_FUNCTIONS_URL || '';
+
+// Fallback: direct Gemini calls when Cloud Functions aren't configured yet
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-// Rate limit tracking
+// Rate limit tracking (for direct mode fallback)
 let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 1000; // 1 second minimum between requests
+const MIN_REQUEST_INTERVAL = 1000;
+
+const useCloudFunctions = !!FUNCTIONS_BASE_URL;
+
+// ─── Auth token helper ───
+
+async function getAuthToken(): Promise<string> {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Not signed in');
+  return user.getIdToken();
+}
+
+// ─── Cloud Functions fetch helper ───
+
+async function callFunction<T>(endpoint: string, body: object): Promise<T> {
+  const token = await getAuthToken();
+  const response = await fetch(`${FUNCTIONS_BASE_URL}/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+    if (response.status === 429) {
+      throw new Error('Chester is taking a quick nap! Too many requests. Try again in a few seconds.');
+    }
+    throw new Error(data.error || `Server error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// ─── Direct Gemini fetch (fallback when functions not deployed) ───
 
 async function throttledFetch(url: string, options: RequestInit): Promise<Response> {
   const now = Date.now();
@@ -17,7 +59,6 @@ async function throttledFetch(url: string, options: RequestInit): Promise<Respon
 
   const response = await fetch(url, options);
 
-  // Handle rate limiting (429)
   if (response.status === 429) {
     const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10);
     await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
@@ -28,7 +69,17 @@ async function throttledFetch(url: string, options: RequestInit): Promise<Respon
   return response;
 }
 
-const FOOD_ANALYSIS_PROMPT = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.
+// ═══════════════════════════════════════════
+// Public API — auto-routes through Cloud Functions or direct Gemini
+// ═══════════════════════════════════════════
+
+export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodResult> {
+  if (useCloudFunctions) {
+    return callFunction<GeminiFoodResult>('analyzeFoodImage', { base64Image });
+  }
+
+  // ── Direct fallback ──
+  const prompt = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.
 
 Analyze this food photo and return a JSON response with this exact structure:
 {
@@ -53,26 +104,17 @@ Rules:
 - chesterReaction should be fun, dog-themed, and encouraging (e.g. "Woof! That salad looks pawsome!" or "Ruff... that's a lot of treats, but I still love you!")
 - Return ONLY valid JSON, no markdown formatting, no code blocks`;
 
-export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodResult> {
   const response = await throttledFetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{
         parts: [
-          { text: FOOD_ANALYSIS_PROMPT },
-          {
-            inline_data: {
-              mime_type: 'image/jpeg',
-              data: base64Image,
-            },
-          },
+          { text: prompt },
+          { inline_data: { mime_type: 'image/jpeg', data: base64Image } },
         ],
       }],
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 1024,
-      },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
     }),
   });
 
@@ -86,16 +128,17 @@ export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodR
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new Error('No response from Gemini API');
-  }
-
+  if (!text) throw new Error('No response from Gemini API');
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   return JSON.parse(cleaned) as GeminiFoodResult;
 }
 
 export async function analyzeTextFood(description: string): Promise<GeminiFoodResult> {
+  if (useCloudFunctions) {
+    return callFunction<GeminiFoodResult>('analyzeTextFood', { description });
+  }
+
+  // ── Direct fallback ──
   const textPrompt = `You are a nutrition AI for a food tracking app with a dog mascot named Chester.
 
 The user described their food as: "${description}"
@@ -141,7 +184,11 @@ Return ONLY valid JSON, no markdown, no code blocks.`;
 }
 
 export async function generateMealPlan(goals: UserGoals, dietProfile?: DietProfile): Promise<MealPlanDay[]> {
-  // Build personalised context from diet profile
+  if (useCloudFunctions) {
+    return callFunction<MealPlanDay[]>('generateMealPlan', { goals, dietProfile });
+  }
+
+  // ── Direct fallback ──
   let profileContext = '';
   if (dietProfile) {
     const parts: string[] = [];
@@ -218,11 +265,7 @@ Rules:
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new Error('No response from Gemini API');
-  }
-
+  if (!text) throw new Error('No response from Gemini API');
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   return JSON.parse(cleaned) as MealPlanDay[];
 }
