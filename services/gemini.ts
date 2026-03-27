@@ -15,6 +15,103 @@ const MIN_REQUEST_INTERVAL = 1000;
 
 const useCloudFunctions = !!FUNCTIONS_BASE_URL;
 
+// ─── Prompt Constants (direct-mode fallback only) ───
+
+const FOOD_IMAGE_PROMPT = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.
+
+Analyze this food photo and return a JSON response with this exact structure:
+{
+  "foods": [
+    {
+      "name": "Food item name",
+      "calories": estimated_calories_number,
+      "protein": estimated_protein_grams,
+      "carbs": estimated_carbs_grams,
+      "fat": estimated_fat_grams,
+      "servingSize": "estimated portion description"
+    }
+  ],
+  "overallScore": "great|good|okay|poor",
+  "chesterReaction": "A fun, short reaction from Chester the dog about this meal (1-2 sentences, playful and encouraging)"
+}
+
+Rules:
+- Identify ALL food items visible in the photo
+- Estimate realistic portion sizes and nutrition values
+- overallScore: "great" for very healthy meals, "good" for balanced, "okay" for moderate, "poor" for very unhealthy
+- chesterReaction should be fun, dog-themed, and encouraging (e.g. "Woof! That salad looks pawsome!" or "Ruff... that's a lot of treats, but I still love you!")
+- Return ONLY valid JSON, no markdown formatting, no code blocks`;
+
+function buildTextFoodPrompt(description: string): string {
+  return `You are a nutrition AI for a food tracking app with a dog mascot named Chester.
+
+The user described their food as: "${description}"
+
+Return a JSON response with this exact structure:
+{
+  "foods": [
+    {
+      "name": "Food item name",
+      "calories": estimated_calories_number,
+      "protein": estimated_protein_grams,
+      "carbs": estimated_carbs_grams,
+      "fat": estimated_fat_grams,
+      "servingSize": "estimated portion description"
+    }
+  ],
+  "overallScore": "great|good|okay|poor",
+  "chesterReaction": "A fun, short reaction from Chester the dog about this food"
+}
+
+Return ONLY valid JSON, no markdown, no code blocks.`;
+}
+
+function buildMealPlanPrompt(goals: UserGoals, profileContext: string): string {
+  return `You are a meal planning AI for a food tracking app called ChesterClub.
+
+The user has these daily nutrition goals:
+- Calories: ${goals.dailyCalories}
+- Protein: ${goals.dailyProtein}g
+- Carbs: ${goals.dailyCarbs}g
+- Fat: ${goals.dailyFat}g${profileContext}
+
+Generate a 7-day meal plan. Return a JSON array with 7 objects, one per day. Each day should have breakfast, lunch, dinner, and a snack.
+
+Return this exact JSON structure (array of 7 days):
+[
+  {
+    "date": "Day 1",
+    "meals": {
+      "breakfast": {
+        "name": "Meal name",
+        "description": "Brief description of the meal with key ingredients",
+        "calories": number,
+        "protein": number,
+        "carbs": number,
+        "fat": number,
+        "servingSize": "portion description"
+      },
+      "lunch": { same structure },
+      "dinner": { same structure },
+      "snack": { same structure }
+    },
+    "totalCalories": sum of all meals,
+    "totalProtein": sum,
+    "totalCarbs": sum,
+    "totalFat": sum
+  }
+]
+
+Rules:
+- Each day's totals should be close to the user's goals
+- Include varied, realistic, and tasty meals
+- Respect ALL dietary restrictions and allergies strictly — never include allergens
+- Vary cuisines across the week, favouring preferred cuisines when specified
+- Match recipes to the user's cooking skill level and prep time constraints
+- Keep descriptions brief but appetizing (1 sentence)
+- Return ONLY valid JSON, no markdown, no code blocks`;
+}
+
 // Safe JSON parser — prevents crashes from malformed AI responses
 function safeJsonParse<T>(text: string, label: string): T {
   try {
@@ -88,38 +185,13 @@ export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodR
   }
 
   // ── Direct fallback ──
-  const prompt = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.
-
-Analyze this food photo and return a JSON response with this exact structure:
-{
-  "foods": [
-    {
-      "name": "Food item name",
-      "calories": estimated_calories_number,
-      "protein": estimated_protein_grams,
-      "carbs": estimated_carbs_grams,
-      "fat": estimated_fat_grams,
-      "servingSize": "estimated portion description"
-    }
-  ],
-  "overallScore": "great|good|okay|poor",
-  "chesterReaction": "A fun, short reaction from Chester the dog about this meal (1-2 sentences, playful and encouraging)"
-}
-
-Rules:
-- Identify ALL food items visible in the photo
-- Estimate realistic portion sizes and nutrition values
-- overallScore: "great" for very healthy meals, "good" for balanced, "okay" for moderate, "poor" for very unhealthy
-- chesterReaction should be fun, dog-themed, and encouraging (e.g. "Woof! That salad looks pawsome!" or "Ruff... that's a lot of treats, but I still love you!")
-- Return ONLY valid JSON, no markdown formatting, no code blocks`;
-
   const response = await throttledFetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{
         parts: [
-          { text: prompt },
+          { text: FOOD_IMAGE_PROMPT },
           { inline_data: { mime_type: 'image/jpeg', data: base64Image } },
         ],
       }],
@@ -148,33 +220,11 @@ export async function analyzeTextFood(description: string): Promise<GeminiFoodRe
   }
 
   // ── Direct fallback ──
-  const textPrompt = `You are a nutrition AI for a food tracking app with a dog mascot named Chester.
-
-The user described their food as: "${description}"
-
-Return a JSON response with this exact structure:
-{
-  "foods": [
-    {
-      "name": "Food item name",
-      "calories": estimated_calories_number,
-      "protein": estimated_protein_grams,
-      "carbs": estimated_carbs_grams,
-      "fat": estimated_fat_grams,
-      "servingSize": "estimated portion description"
-    }
-  ],
-  "overallScore": "great|good|okay|poor",
-  "chesterReaction": "A fun, short reaction from Chester the dog about this food"
-}
-
-Return ONLY valid JSON, no markdown, no code blocks.`;
-
   const response = await throttledFetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: textPrompt }] }],
+      contents: [{ parts: [{ text: buildTextFoodPrompt(description) }] }],
       generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
     }),
   });
@@ -213,55 +263,11 @@ export async function generateMealPlan(goals: UserGoals, dietProfile?: DietProfi
     profileContext = parts.length > 0 ? `\n\nUser profile:\n${parts.map(p => `- ${p}`).join('\n')}` : '';
   }
 
-  const prompt = `You are a meal planning AI for a food tracking app called ChesterClub.
-
-The user has these daily nutrition goals:
-- Calories: ${goals.dailyCalories}
-- Protein: ${goals.dailyProtein}g
-- Carbs: ${goals.dailyCarbs}g
-- Fat: ${goals.dailyFat}g${profileContext}
-
-Generate a 7-day meal plan. Return a JSON array with 7 objects, one per day. Each day should have breakfast, lunch, dinner, and a snack.
-
-Return this exact JSON structure (array of 7 days):
-[
-  {
-    "date": "Day 1",
-    "meals": {
-      "breakfast": {
-        "name": "Meal name",
-        "description": "Brief description of the meal with key ingredients",
-        "calories": number,
-        "protein": number,
-        "carbs": number,
-        "fat": number,
-        "servingSize": "portion description"
-      },
-      "lunch": { same structure },
-      "dinner": { same structure },
-      "snack": { same structure }
-    },
-    "totalCalories": sum of all meals,
-    "totalProtein": sum,
-    "totalCarbs": sum,
-    "totalFat": sum
-  }
-]
-
-Rules:
-- Each day's totals should be close to the user's goals
-- Include varied, realistic, and tasty meals
-- Respect ALL dietary restrictions and allergies strictly — never include allergens
-- Vary cuisines across the week, favouring preferred cuisines when specified
-- Match recipes to the user's cooking skill level and prep time constraints
-- Keep descriptions brief but appetizing (1 sentence)
-- Return ONLY valid JSON, no markdown, no code blocks`;
-
   const response = await throttledFetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts: [{ text: buildMealPlanPrompt(goals, profileContext) }] }],
       generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
     }),
   });
