@@ -1,13 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { generateWeeklyInsights, getDailyTip, NutritionInsight } from '../../services/insightsService';
+import ScreenHeader from '../../components/ui/ScreenHeader';
+import EmptyState from '../../components/ui/EmptyState';
+import LoadingScreen from '../../components/ui/LoadingScreen';
 
 const TYPE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
   celebration: { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32' },
@@ -20,7 +21,6 @@ export default function InsightsScreen() {
   const [insights, setInsights] = useState<NutritionInsight[]>([]);
   const [dailyTip, setDailyTip] = useState<NutritionInsight | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   const loadInsights = useCallback(async () => {
     setLoading(true);
@@ -38,17 +38,10 @@ export default function InsightsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.header}>Nutrition Insights</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <ScreenHeader title="Nutrition Insights" />
 
         {loading ? (
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 60 }} />
+          <LoadingScreen />
         ) : (
           <>
             {/* Daily Tip */}
@@ -69,13 +62,11 @@ export default function InsightsScreen() {
             <Text style={styles.sectionTitle}>This Week's Analysis</Text>
 
             {insights.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>📊</Text>
-                <Text style={styles.emptyTitle}>Not Enough Data</Text>
-                <Text style={styles.emptyText}>
-                  Log meals for a few days and come back for personalized insights!
-                </Text>
-              </View>
+              <EmptyState
+                icon="📊"
+                title="Not Enough Data"
+                message="Log meals for a few days and come back for personalized insights!"
+              />
             ) : (
               insights.map(insight => {
                 const colors = TYPE_COLORS[insight.type] || TYPE_COLORS.tip;
@@ -112,12 +103,6 @@ export default function InsightsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
-
-  headerRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  header: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
 
   // Daily Tip
   dailyTipCard: {
@@ -156,12 +141,4 @@ const styles = StyleSheet.create({
   typeBadgeText: { fontSize: FontSize.xs, fontWeight: '600' },
   insightMessage: { fontSize: FontSize.sm, lineHeight: 20, marginLeft: 30 },
 
-  // Empty state
-  emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
-  emptyTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, marginBottom: Spacing.sm },
-  emptyText: {
-    fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center',
-    lineHeight: 22, paddingHorizontal: Spacing.xl,
-  },
 });

@@ -9,6 +9,9 @@ import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getFavorites, removeFavorite, favoriteToFoodItem, FavoriteFood } from '../../services/favoritesService';
 import { addFoodToLog, feedChester, addRecentFood, getTodayKey } from '../../services/storage';
+import ScreenHeader from '../../components/ui/ScreenHeader';
+import EmptyState from '../../components/ui/EmptyState';
+import LoadingScreen from '../../components/ui/LoadingScreen';
 
 export default function FavoritesScreen() {
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
@@ -81,14 +84,7 @@ export default function FavoritesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.header}>Favorites</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <ScreenHeader title="Favorites" />
 
         {/* Meal Type Selector */}
         <View style={styles.mealTypeRow}>
@@ -107,19 +103,16 @@ export default function FavoritesScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 60 }} />
+          <LoadingScreen />
         ) : favorites.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>⭐</Text>
-            <Text style={styles.emptyTitle}>No Favorites Yet</Text>
-            <Text style={styles.emptyText}>
-              When viewing your food log, tap the heart icon on any food to save it here for quick re-logging!
-            </Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/(tabs)/scanner')}>
-              <Ionicons name="camera" size={20} color={Colors.surface} />
-              <Text style={styles.emptyBtnText}>Scan Your First Meal</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="⭐"
+            title="No Favorites Yet"
+            message="When viewing your food log, tap the heart icon on any food to save it here for quick re-logging!"
+            buttonLabel="Scan Your First Meal"
+            buttonIcon={<Ionicons name="camera" size={20} color="#fff" />}
+            onPress={() => router.push('/(tabs)/scanner')}
+          />
         ) : (
           <>
             <Text style={styles.sectionHint}>
@@ -184,12 +177,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
 
-  headerRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  header: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
-
   // Meal type selector
   mealTypeRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
@@ -231,18 +218,4 @@ const styles = StyleSheet.create({
   quickLogBtn: { padding: 2 },
   removeBtn: { padding: 4 },
 
-  // Empty state
-  emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
-  emptyTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, marginBottom: Spacing.sm },
-  emptyText: {
-    fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center',
-    lineHeight: 22, paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg,
-  },
-  emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.primary, paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
-  },
-  emptyBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '700' },
 });
