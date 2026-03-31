@@ -172,10 +172,10 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Chester */}
-      <View style={styles.chesterSection}>
+      {/* Chester + Speech Bubble side by side */}
+      <View style={styles.chesterRow}>
         <ChesterAvatar chester={chester} size="large" />
-        <ChesterReaction message={greeting} visible={true} />
+        <ChesterReaction message={greeting} visible={true} autoDismissMs={8000} />
       </View>
 
       {/* Calories & Macros Card */}
@@ -629,8 +629,8 @@ const styles = StyleSheet.create({
   headerIcons: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   header: { fontSize: FontSize.xxl, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.4)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
 
-  // Chester
-  chesterSection: { alignItems: 'center', marginBottom: Spacing.lg, gap: Spacing.md },
+  // Chester + bubble row
+  chesterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg, gap: Spacing.md },
 
   // Cards
   card: {
