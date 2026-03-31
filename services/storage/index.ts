@@ -59,6 +59,16 @@ export {
   refreshChallengeProgress,
 } from './challengesStorage';
 export { getSettings, saveSettings, exportAllData } from './settingsStorage';
+export {
+  getDailyDigState,
+  canDigToday,
+  performDig,
+  isXpBoneActive,
+  getActiveDigTitle,
+  hasUnlockedExclusive,
+  getTotalDigs,
+} from './dailyDigStorage';
+export type { DailyDigState } from './dailyDigStorage';
 export type { AppSettings } from './settingsStorage';
 
 // Re-export nutrition utilities (previously re-exported from the old storage.ts)

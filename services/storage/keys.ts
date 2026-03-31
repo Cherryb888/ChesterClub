@@ -9,6 +9,7 @@ export const KEYS = {
   TOTAL_SCANS: 'total_food_scans',
   PENDING_ACHIEVEMENTS: 'pending_achievement_unlocks',
   PENDING_MILESTONE: 'pending_streak_milestone',
+  DAILY_DIG: 'daily_dig_state',
 };
 
 export function getTodayKey(): string {

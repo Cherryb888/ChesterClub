@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
-  Dimensions, FlatList, Alert, ImageBackground, Image,
+  Dimensions, FlatList, Alert, ImageBackground, Image, Animated, Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,7 @@ import {
   getChallengesState, refreshChallengeProgress, claimChallengeReward,
   DAILY_CHALLENGES, WEEKLY_CHALLENGES, MONTHLY_CHALLENGES, ALL_TIME_CHALLENGES,
   popPendingAchievement, getPendingMilestone, getWeeklyStats,
+  canDigToday,
 } from '../../services/storage';
 import { getChesterDialogue } from '../../services/chesterDialogue';
 import { AchievementDefinition } from '../../constants/achievements';
@@ -49,6 +50,22 @@ export default function HomeScreen() {
   const [milestoneModal, setMilestoneModal] = useState<StreakMilestone | null>(null);
   const [weeklyRecapVisible, setWeeklyRecapVisible] = useState(false);
   const [weeklyStats, setWeeklyStats] = useState<any>(null);
+  const [digAvailable, setDigAvailable] = useState(false);
+  const digPulse = useRef(new Animated.Value(1)).current;
+
+  // Pulsing animation for dig button when available
+  useEffect(() => {
+    if (digAvailable) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(digPulse, { toValue: 1.15, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(digPulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        ]),
+      ).start();
+    } else {
+      digPulse.setValue(1);
+    }
+  }, [digAvailable]);
 
   const loadData = useCallback(async () => {
     await checkChesterDecay();
@@ -67,6 +84,8 @@ export default function HomeScreen() {
     await refreshChallengeProgress();
     const challenges = await getChallengesState();
     setChallengesState(challenges);
+    const digOk = await canDigToday();
+    setDigAvailable(digOk);
 
     // Generate context-aware Chester dialogue
     const dialogue = getChesterDialogue({
@@ -189,6 +208,24 @@ export default function HomeScreen() {
         <ChesterAvatar chester={chester} size="large" />
         <ChesterReaction message={greeting} visible={true} autoDismissMs={8000} />
       </View>
+
+      {/* Daily Dig button */}
+      <TouchableOpacity
+        style={styles.digEntryBtn}
+        onPress={() => router.push('/(tabs)/daily-dig')}
+        activeOpacity={0.8}
+      >
+        <Animated.View style={[styles.digEntryPaw, digAvailable && { transform: [{ scale: digPulse }] }]}>
+          <Text style={styles.digEntryPawText}>🐾</Text>
+        </Animated.View>
+        <View>
+          <Text style={styles.digEntryTitle}>Daily Dig</Text>
+          <Text style={styles.digEntrySubtitle}>
+            {digAvailable ? 'Chester wants to dig!' : 'Come back tomorrow'}
+          </Text>
+        </View>
+        {digAvailable && <View style={styles.digEntryDot} />}
+      </TouchableOpacity>
 
       {/* Calories & Macros Card */}
       <View style={styles.card}>
@@ -660,6 +697,25 @@ const styles = StyleSheet.create({
 
   // Chester + bubble row
   chesterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg, gap: Spacing.md },
+
+  // Daily Dig entry
+  digEntryBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    backgroundColor: 'rgba(139, 105, 20, 0.12)', borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md, borderWidth: 1, borderColor: 'rgba(139, 105, 20, 0.2)',
+  },
+  digEntryPaw: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#8B6914', justifyContent: 'center', alignItems: 'center',
+  },
+  digEntryPawText: { fontSize: 20 },
+  digEntryTitle: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.text },
+  digEntrySubtitle: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  digEntryDot: {
+    width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50',
+    position: 'absolute', top: 8, right: 12,
+  },
 
   // Cards
   card: {

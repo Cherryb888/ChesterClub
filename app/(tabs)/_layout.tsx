@@ -131,6 +131,10 @@ export default function TabLayout() {
         name="feed"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="daily-dig"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

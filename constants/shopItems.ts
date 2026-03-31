@@ -3,7 +3,7 @@
 // Cosmetic items purchasable with coins. Emoji-based for MVP.
 // Categories determine where the cosmetic renders on Chester.
 
-export type ShopCategory = 'hat' | 'accessory' | 'background' | 'title' | 'consumable';
+export type ShopCategory = 'hat' | 'accessory' | 'background' | 'title' | 'consumable' | 'dig_exclusive';
 
 export interface ShopItem {
   id: string;
@@ -198,6 +198,26 @@ export const SHOP_ITEMS: ShopItem[] = [
     price: 75,
     category: 'consumable',
     icon: '🛡️',
+    premium: false,
+  },
+
+  // ─── Dig Exclusives (cannot be bought, only found via Daily Dig) ───
+  {
+    id: 'dig_bandana',
+    name: 'Chester\'s Bandana',
+    description: 'A special bandana only found by digging! Super rare!',
+    price: 0,
+    category: 'dig_exclusive',
+    icon: '🎀',
+    premium: false,
+  },
+  {
+    id: 'dig_sunflower',
+    name: 'Sunflower Hat',
+    description: 'A beautiful sunflower hat only found by digging! Super rare!',
+    price: 0,
+    category: 'dig_exclusive',
+    icon: '🌻',
     premium: false,
   },
 ];
