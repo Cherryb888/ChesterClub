@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { MealPlan, MealPlanDay, PlannedMeal, FoodItem } from '../../types';
 import { getProfile, saveMealPlan, getMealPlan, addFoodToLog, addRecentFood, feedChester } from '../../services/storage';
+import ChesterFaceIcon from '../../components/Chester/ChesterFaceIcon';
 import { generateMealPlan } from '../../services/gemini';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
@@ -104,7 +105,7 @@ export default function MealPlanScreen() {
             </View>
           ) : (
             <View style={styles.loadingRow}>
-              <Text style={{ fontSize: 24 }}>🐶</Text>
+              <ChesterFaceIcon size={28} />
               <Text style={styles.generateText}>
                 {mealPlan ? 'Generate New Plan' : 'Plan My Week'}
               </Text>
