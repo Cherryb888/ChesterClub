@@ -445,12 +445,15 @@ export default function HomeScreen() {
                         style={styles.claimBtn}
                         onPress={() => handleClaimReward(challenge.id)}
                       >
-                        <Text style={styles.claimBtnText}>Claim</Text>
+                        <Text style={styles.claimBtnText}>🪙 {challenge.reward}</Text>
                       </TouchableOpacity>
                     ) : claimed ? (
                       <Text style={styles.claimedText}>Claimed</Text>
                     ) : (
-                      <Text style={styles.rewardText}>🪙 {challenge.reward}</Text>
+                      <View style={styles.rewardBadge}>
+                        <Text style={styles.rewardCoin}>🪙</Text>
+                        <Text style={styles.rewardAmount}>{challenge.reward}</Text>
+                      </View>
                     )}
                   </View>
                 </View>
@@ -739,7 +742,14 @@ const styles = StyleSheet.create({
   challengeTitle: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.text },
   challengeDesc: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
   challengeReward: { alignItems: 'center' },
-  rewardText: { fontSize: FontSize.xs, fontWeight: '600', color: '#B8860B' },
+  rewardBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#FFF8E1', borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm, paddingVertical: 3,
+    borderWidth: 1, borderColor: '#FFD700' + '40',
+  },
+  rewardCoin: { fontSize: 14 },
+  rewardAmount: { fontSize: FontSize.sm, fontWeight: '800', color: '#B8860B' },
   claimBtn: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full },
   claimBtnText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   claimedText: { fontSize: FontSize.xs, color: Colors.success, fontWeight: '600' },
