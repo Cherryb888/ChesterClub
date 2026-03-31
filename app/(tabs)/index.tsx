@@ -172,6 +172,18 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Health bar — elongated heart, left-aligned */}
+      <View style={styles.healthBarContainer}>
+        <Text style={styles.healthHeart}>❤️</Text>
+        <View style={styles.healthBarOuter}>
+          <View style={[styles.healthBarFill, {
+            width: `${chester.health}%`,
+            backgroundColor: chester.health > 60 ? '#4CAF50' : chester.health > 30 ? '#FFC107' : '#FF5252',
+          }]} />
+        </View>
+        <Text style={styles.healthBarLabel}>{chester.health}</Text>
+      </View>
+
       {/* Chester + Speech Bubble side by side */}
       <View style={styles.chesterRow}>
         <ChesterAvatar chester={chester} size="large" />
@@ -628,6 +640,23 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
   headerIcons: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   header: { fontSize: FontSize.xxl, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.4)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+
+  // Health bar (above Chester, left-aligned)
+  healthBarContainer: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
+    gap: 8, marginBottom: Spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm, paddingVertical: 6,
+  },
+  healthHeart: { fontSize: 20 },
+  healthBarOuter: {
+    width: 120, height: 14, backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 7, overflow: 'hidden',
+  },
+  healthBarFill: {
+    height: '100%', borderRadius: 7,
+  },
+  healthBarLabel: { fontSize: FontSize.sm, fontWeight: '800', color: Colors.text, minWidth: 24 },
 
   // Chester + bubble row
   chesterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg, gap: Spacing.md },
