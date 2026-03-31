@@ -1,25 +1,28 @@
 export const Colors = {
-  primary: '#FF8C42',       // Warm orange - Chester's color
-  primaryLight: '#FFB380',
-  primaryDark: '#E07030',
+  primary: '#3BA99C',       // Greeny-teal from Chester's background
+  primaryLight: '#5CC4B8',
+  primaryDark: '#2E8B7A',
   secondary: '#4ECDC4',     // Teal accent
   secondaryLight: '#7EDDD6',
-  background: '#FFF8F0',    // Warm cream background
-  surface: '#FFFFFF',
+  background: '#E8F5F3',    // Light teal tint
+  surface: 'rgba(255, 255, 255, 0.92)',
   text: '#2D2D2D',
-  textSecondary: '#7A7A7A',
-  textLight: '#AAAAAA',
+  textSecondary: '#5A6B68',
+  textLight: '#8A9B98',
   success: '#4CAF50',
   warning: '#FFC107',
   error: '#FF5252',
-  border: '#F0E6DC',
+  border: '#C8DDD9',
   cardShadow: 'rgba(0,0,0,0.08)',
 
   // Macro colors
-  calories: '#FF8C42',
+  calories: '#3BA99C',
   protein: '#FF5252',
   carbs: '#4ECDC4',
   fat: '#FFD93D',
+
+  // Chester palette extras
+  mediumBlue: '#4A90B8',
 };
 
 export const Spacing = {

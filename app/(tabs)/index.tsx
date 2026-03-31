@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
-  Dimensions, FlatList, Alert,
+  Dimensions, FlatList, Alert, ImageBackground, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,6 +27,8 @@ import WeeklyRecap from '../../components/WeeklyRecap';
 import { ChesterState, DailyLog, UserGoals, WaterLog, MealPlan, ChallengesState, Challenge, ChallengeProgress } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CHESTER_BACKGROUND = require('../../assets/chester/chester-background.png');
+const CHESTER_FACE = require('../../assets/chester/chester-solo.png');
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -154,26 +156,38 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => router.push('/(tabs)/dashboard')}>
-          <Ionicons name="stats-chart" size={24} color={Colors.textSecondary} />
+          <Ionicons name="stats-chart" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.header}>ChesterClub</Text>
         <View style={styles.headerIcons}>
           <TouchableOpacity onPress={() => router.push('/(tabs)/insights')}>
-            <Ionicons name="bulb-outline" size={24} color={Colors.textSecondary} />
+            <Ionicons name="bulb-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
-            <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
+            <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
-            <Ionicons name="person-circle" size={28} color={Colors.textSecondary} />
+            <Ionicons name="person-circle" size={28} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Chester */}
-      <View style={styles.chesterSection}>
+      {/* Health bar — elongated heart, left-aligned */}
+      <View style={styles.healthBarContainer}>
+        <Text style={styles.healthHeart}>❤️</Text>
+        <View style={styles.healthBarOuter}>
+          <View style={[styles.healthBarFill, {
+            width: `${chester.health}%`,
+            backgroundColor: chester.health > 60 ? '#4CAF50' : chester.health > 30 ? '#FFC107' : '#FF5252',
+          }]} />
+        </View>
+        <Text style={styles.healthBarLabel}>{chester.health}</Text>
+      </View>
+
+      {/* Chester + Speech Bubble side by side */}
+      <View style={styles.chesterRow}>
         <ChesterAvatar chester={chester} size="large" />
-        <ChesterReaction message={greeting} visible={true} />
+        <ChesterReaction message={greeting} visible={true} autoDismissMs={8000} />
       </View>
 
       {/* Calories & Macros Card */}
@@ -319,12 +333,15 @@ export default function HomeScreen() {
     const current = challengeMap[challengeTab];
 
     return (
-      <ScrollView
-        style={{ width: SCREEN_WIDTH }}
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-      >
+      <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+        {/* Overlay to hide background Chester on Club page */}
+        <View style={styles.clubOverlay} />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        >
         {/* Club Header */}
         <View style={styles.clubHeader}>
           <Text style={styles.clubTitle}>The Club</Text>
@@ -440,12 +457,15 @@ export default function HomeScreen() {
                         style={styles.claimBtn}
                         onPress={() => handleClaimReward(challenge.id)}
                       >
-                        <Text style={styles.claimBtnText}>Claim</Text>
+                        <Text style={styles.claimBtnText}>🪙 {challenge.reward}</Text>
                       </TouchableOpacity>
                     ) : claimed ? (
                       <Text style={styles.claimedText}>Claimed</Text>
                     ) : (
-                      <Text style={styles.rewardText}>🪙 {challenge.reward}</Text>
+                      <View style={styles.rewardBadge}>
+                        <Text style={styles.rewardCoin}>🪙</Text>
+                        <Text style={styles.rewardAmount}>{challenge.reward}</Text>
+                      </View>
                     )}
                   </View>
                 </View>
@@ -516,11 +536,13 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ height: 20 }} />
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   };
 
   return (
+    <ImageBackground source={CHESTER_BACKGROUND} style={styles.backgroundImage} resizeMode="cover">
     <SafeAreaView style={styles.container}>
       {/* Page dots */}
       <View style={styles.pageDots}>
@@ -572,6 +594,7 @@ export default function HomeScreen() {
         />
       )}
     </SafeAreaView>
+    </ImageBackground>
   );
 }
 
@@ -601,26 +624,48 @@ function getAchievementLabel(id: string): string {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  backgroundImage: { flex: 1, width: '100%', height: '100%' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
+
+  // Club overlay — hides Chester from background, keeps teal tint
+  clubOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(232, 245, 243, 0.88)', zIndex: 0 },
 
   // Page dots
   pageDots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, paddingTop: Spacing.xs, paddingBottom: Spacing.xs },
-  pageDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
+  pageDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.5)' },
   pageDotActive: { backgroundColor: Colors.primary, width: 20 },
 
   // Header
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
   headerIcons: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  header: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.primary, textAlign: 'center' },
+  header: { fontSize: FontSize.xxl, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.4)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
 
-  // Chester
-  chesterSection: { alignItems: 'center', marginBottom: Spacing.lg, gap: Spacing.md },
+  // Health bar (above Chester, left-aligned)
+  healthBarContainer: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
+    gap: 8, marginBottom: Spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm, paddingVertical: 6,
+  },
+  healthHeart: { fontSize: 20 },
+  healthBarOuter: {
+    width: 120, height: 14, backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 7, overflow: 'hidden',
+  },
+  healthBarFill: {
+    height: '100%', borderRadius: 7,
+  },
+  healthBarLabel: { fontSize: FontSize.sm, fontWeight: '800', color: Colors.text, minWidth: 24 },
+
+  // Chester + bubble row
+  chesterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg, gap: Spacing.md },
 
   // Cards
   card: {
-    backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, padding: Spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)', borderRadius: BorderRadius.lg, padding: Spacing.lg,
     marginBottom: Spacing.md,
+    borderWidth: 1, borderColor: 'rgba(78, 205, 196, 0.2)',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
   },
   cardTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, marginBottom: Spacing.md },
@@ -726,7 +771,14 @@ const styles = StyleSheet.create({
   challengeTitle: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.text },
   challengeDesc: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
   challengeReward: { alignItems: 'center' },
-  rewardText: { fontSize: FontSize.xs, fontWeight: '600', color: '#B8860B' },
+  rewardBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#FFF8E1', borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm, paddingVertical: 3,
+    borderWidth: 1, borderColor: '#FFD700' + '40',
+  },
+  rewardCoin: { fontSize: 14 },
+  rewardAmount: { fontSize: FontSize.sm, fontWeight: '800', color: '#B8860B' },
   claimBtn: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full },
   claimBtnText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   claimedText: { fontSize: FontSize.xs, color: Colors.success, fontWeight: '600' },

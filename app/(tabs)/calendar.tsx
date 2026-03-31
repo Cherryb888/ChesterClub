@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  SafeAreaView, ActivityIndicator, FlatList,
+  SafeAreaView, ActivityIndicator, FlatList, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
@@ -13,6 +13,7 @@ const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
+const MIN_YEAR = 2024;
 
 export default function CalendarScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -21,6 +22,7 @@ export default function CalendarScreen() {
   const [selectedLog, setSelectedLog] = useState<DailyLog | null>(null);
   const [goals, setGoals] = useState<UserGoals | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pickerVisible, setPickerVisible] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -40,7 +42,12 @@ export default function CalendarScreen() {
     loadMonth();
   }, [loadMonth]);
 
+  const canGoPrev = () => {
+    return year > MIN_YEAR || (year === MIN_YEAR && month > 0);
+  };
+
   const goToPrevMonth = () => {
+    if (!canGoPrev()) return;
     setCurrentDate(new Date(year, month - 1, 1));
     setSelectedDate(null);
     setSelectedLog(null);
@@ -99,10 +106,13 @@ export default function CalendarScreen() {
 
         {/* Month navigation */}
         <View style={styles.monthNav}>
-          <TouchableOpacity onPress={goToPrevMonth} style={styles.navBtn}>
+          <TouchableOpacity onPress={goToPrevMonth} style={[styles.navBtn, !canGoPrev() && { opacity: 0.3 }]} disabled={!canGoPrev()}>
             <Ionicons name="chevron-back" size={24} color={Colors.text} />
           </TouchableOpacity>
-          <Text style={styles.monthLabel}>{MONTHS[month]} {year}</Text>
+          <TouchableOpacity onPress={() => setPickerVisible(true)} style={styles.monthLabelBtn}>
+            <Text style={styles.monthLabel}>{MONTHS[month]} {year}</Text>
+            <Ionicons name="caret-down" size={14} color={Colors.textSecondary} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={goToNextMonth} style={[styles.navBtn, !canGoNext() && { opacity: 0.3 }]} disabled={!canGoNext()}>
             <Ionicons name="chevron-forward" size={24} color={Colors.text} />
           </TouchableOpacity>
@@ -224,6 +234,57 @@ export default function CalendarScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Month/Year Picker Modal */}
+      <Modal visible={pickerVisible} transparent animationType="fade" onRequestClose={() => setPickerVisible(false)}>
+        <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setPickerVisible(false)}>
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerTitle}>Jump to Month</Text>
+
+            {/* Year selector */}
+            <View style={styles.pickerYearRow}>
+              {Array.from({ length: new Date().getFullYear() - MIN_YEAR + 1 }, (_, i) => MIN_YEAR + i).map(y => (
+                <TouchableOpacity
+                  key={y}
+                  style={[styles.pickerYearBtn, y === year && styles.pickerYearBtnActive]}
+                  onPress={() => {
+                    const now = new Date();
+                    // If selecting current year, clamp month to current month
+                    const maxMonth = y === now.getFullYear() ? now.getMonth() : 11;
+                    const newMonth = month > maxMonth ? maxMonth : month;
+                    setCurrentDate(new Date(y, newMonth, 1));
+                  }}
+                >
+                  <Text style={[styles.pickerYearText, y === year && styles.pickerYearTextActive]}>{y}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Month grid */}
+            <View style={styles.pickerMonthGrid}>
+              {MONTHS.map((m, idx) => {
+                const now = new Date();
+                const disabled = year === now.getFullYear() && idx > now.getMonth();
+                return (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.pickerMonthBtn, idx === month && styles.pickerMonthBtnActive, disabled && { opacity: 0.3 }]}
+                    disabled={disabled}
+                    onPress={() => {
+                      setCurrentDate(new Date(year, idx, 1));
+                      setSelectedDate(null);
+                      setSelectedLog(null);
+                      setPickerVisible(false);
+                    }}
+                  >
+                    <Text style={[styles.pickerMonthText, idx === month && styles.pickerMonthTextActive]}>{m.slice(0, 3)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -239,6 +300,7 @@ const styles = StyleSheet.create({
   },
   navBtn: { padding: Spacing.sm },
   monthLabel: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text },
+  monthLabelBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legend: {
     flexDirection: 'row', justifyContent: 'center', gap: Spacing.md,
     marginBottom: Spacing.md,
@@ -298,4 +360,23 @@ const styles = StyleSheet.create({
   foodName: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text, flex: 1 },
   foodCal: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.calories },
   foodMeta: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+
+  // Picker modal
+  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  pickerContainer: {
+    backgroundColor: '#fff', borderRadius: BorderRadius.lg, padding: Spacing.lg,
+    width: '85%', maxWidth: 360,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+  },
+  pickerTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, textAlign: 'center', marginBottom: Spacing.md },
+  pickerYearRow: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
+  pickerYearBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.full, backgroundColor: Colors.background },
+  pickerYearBtnActive: { backgroundColor: Colors.primary },
+  pickerYearText: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
+  pickerYearTextActive: { color: '#fff' },
+  pickerMonthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, justifyContent: 'center' },
+  pickerMonthBtn: { width: '28%', paddingVertical: Spacing.sm, borderRadius: BorderRadius.md, alignItems: 'center', backgroundColor: Colors.background },
+  pickerMonthBtnActive: { backgroundColor: Colors.primary },
+  pickerMonthText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.text },
+  pickerMonthTextActive: { color: '#fff' },
 });

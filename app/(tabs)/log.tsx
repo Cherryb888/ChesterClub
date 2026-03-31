@@ -8,6 +8,7 @@ import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getDailyLog, removeFoodFromLog, getTodayKey, getProfile } from '../../services/storage';
 import { addFavorite, isFavorite, removeFavorite, getFavorites, FavoriteFood } from '../../services/favoritesService';
 import { DailyLog, FoodItem, UserGoals } from '../../types';
+import ChesterFaceIcon from '../../components/Chester/ChesterFaceIcon';
 
 const MEAL_ICONS: Record<string, string> = {
   breakfast: '🌅',
@@ -87,7 +88,7 @@ export default function LogScreen() {
         {/* Meal sections */}
         {log?.items.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🐕</Text>
+            <ChesterFaceIcon size={48} />
             <Text style={styles.emptyText}>No food logged yet today!</Text>
             <Text style={styles.emptySubtext}>Chester is waiting for you to scan your first meal</Text>
             <TouchableOpacity style={styles.scanBtn} onPress={() => router.push('/(tabs)/scanner')}>

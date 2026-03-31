@@ -10,33 +10,41 @@ import { addCoins } from './chesterStorage';
 
 // ─── Challenge Definitions ───
 
+// ─── Reward economy ───
+// Daily total: ~25 coins/day (all 4) → ~175/week from dailies alone
+// Weekly total: ~200 coins/week → ~375/week combined with dailies
+// Monthly total: ~750 coins/month bonus
+// Cheapest shop item: 75 coins (streak shield) — ~3 days
+// Mid items: 200-500 coins — 1-3 weeks
+// Aspirational items: 1500-2000 coins — 1-2 months
+
 export const DAILY_CHALLENGES: Challenge[] = [
-  { id: 'daily_log_3',    type: 'daily',  title: 'Log 3 Meals',     description: 'Log at least 3 meals today',         target: 3,  reward: 10, icon: '🍽️' },
-  { id: 'daily_water',    type: 'daily',  title: 'Hydration Hero',  description: 'Drink all your water glasses today',  target: 1,  reward: 10, icon: '💧' },
+  { id: 'daily_log_3',    type: 'daily',  title: 'Log 3 Meals',     description: 'Log at least 3 meals today',         target: 3,  reward: 8,  icon: '🍽️' },
+  { id: 'daily_water',    type: 'daily',  title: 'Hydration Hero',  description: 'Drink all your water glasses today',  target: 1,  reward: 7,  icon: '💧' },
   { id: 'daily_scan',     type: 'daily',  title: 'Snap Happy',      description: 'Scan a meal with the camera',        target: 1,  reward: 5,  icon: '📸' },
-  { id: 'daily_score_80', type: 'daily',  title: 'Nutrition Star',  description: 'Get a nutrition score of 80+',       target: 80, reward: 15, icon: '⭐' },
+  { id: 'daily_score_80', type: 'daily',  title: 'Nutrition Star',  description: 'Get a nutrition score of 80+',       target: 80, reward: 10, icon: '⭐' },
 ];
 
 export const WEEKLY_CHALLENGES: Challenge[] = [
-  { id: 'weekly_streak_7',  type: 'weekly', title: '7-Day Streak',  description: 'Log food every day this week',              target: 7,  reward: 50, icon: '🔥' },
-  { id: 'weekly_meals_21',  type: 'weekly', title: 'Full Tracker',  description: 'Log 21 meals this week (3/day)',            target: 21, reward: 40, icon: '📋' },
-  { id: 'weekly_water_7',   type: 'weekly', title: 'Water Week',    description: 'Hit water goal every day this week',       target: 7,  reward: 35, icon: '🌊' },
-  { id: 'weekly_healthy_5', type: 'weekly', title: 'Healthy 5',     description: 'Get 5 "great" meal scores this week',      target: 5,  reward: 45, icon: '🥗' },
+  { id: 'weekly_streak_7',  type: 'weekly', title: '7-Day Streak',  description: 'Log food every day this week',              target: 7,  reward: 60,  icon: '🔥' },
+  { id: 'weekly_meals_21',  type: 'weekly', title: 'Full Tracker',  description: 'Log 21 meals this week (3/day)',            target: 21, reward: 50,  icon: '📋' },
+  { id: 'weekly_water_7',   type: 'weekly', title: 'Water Week',    description: 'Hit water goal every day this week',       target: 7,  reward: 40,  icon: '🌊' },
+  { id: 'weekly_healthy_5', type: 'weekly', title: 'Healthy 5',     description: 'Get 5 "great" meal scores this week',      target: 5,  reward: 50,  icon: '🥗' },
 ];
 
 export const MONTHLY_CHALLENGES: Challenge[] = [
-  { id: 'monthly_streak_30', type: 'monthly', title: '30-Day Warrior',  description: 'Maintain a 30-day logging streak',        target: 30,  reward: 200, icon: '🏆' },
-  { id: 'monthly_meals_90',  type: 'monthly', title: 'Dedication',      description: 'Log 90 meals this month',                target: 90,  reward: 150, icon: '💪' },
-  { id: 'monthly_avg_score', type: 'monthly', title: 'Balanced Month',  description: 'Average nutrition score of 75+',         target: 75,  reward: 175, icon: '⚖️' },
+  { id: 'monthly_streak_30', type: 'monthly', title: '30-Day Warrior',  description: 'Maintain a 30-day logging streak',        target: 30,  reward: 300, icon: '🏆' },
+  { id: 'monthly_meals_90',  type: 'monthly', title: 'Dedication',      description: 'Log 90 meals this month',                target: 90,  reward: 200, icon: '💪' },
+  { id: 'monthly_avg_score', type: 'monthly', title: 'Balanced Month',  description: 'Average nutrition score of 75+',         target: 75,  reward: 250, icon: '⚖️' },
 ];
 
 export const ALL_TIME_CHALLENGES: Challenge[] = [
-  { id: 'all_100_meals',  type: 'all_time', title: 'Century Club',      description: 'Log 100 meals total',         target: 100,  reward: 100, icon: '💯' },
-  { id: 'all_500_meals',  type: 'all_time', title: 'Meal Master',       description: 'Log 500 meals total',         target: 500,  reward: 300, icon: '🎖️' },
-  { id: 'all_1000_meals', type: 'all_time', title: 'Legendary Logger',  description: 'Log 1,000 meals total',       target: 1000, reward: 500, icon: '👑' },
-  { id: 'all_level_10',   type: 'all_time', title: 'Chester Lv.10',     description: 'Get Chester to level 10',     target: 10,   reward: 75,  icon: '🐕' },
-  { id: 'all_level_25',   type: 'all_time', title: 'Chester Lv.25',     description: 'Get Chester to level 25',     target: 25,   reward: 200, icon: '🦮' },
-  { id: 'all_level_50',   type: 'all_time', title: 'Golden Chester',    description: 'Get Chester to level 50',     target: 50,   reward: 500, icon: '👑🐕‍🦺' },
+  { id: 'all_100_meals',  type: 'all_time', title: 'Century Club',      description: 'Log 100 meals total',         target: 100,  reward: 250,  icon: '💯' },
+  { id: 'all_500_meals',  type: 'all_time', title: 'Meal Master',       description: 'Log 500 meals total',         target: 500,  reward: 750,  icon: '🎖️' },
+  { id: 'all_1000_meals', type: 'all_time', title: 'Legendary Logger',  description: 'Log 1,000 meals total',       target: 1000, reward: 1500, icon: '👑' },
+  { id: 'all_level_10',   type: 'all_time', title: 'Chester Lv.10',     description: 'Get Chester to level 10',     target: 10,   reward: 150,  icon: '🐕' },
+  { id: 'all_level_25',   type: 'all_time', title: 'Chester Lv.25',     description: 'Get Chester to level 25',     target: 25,   reward: 500,  icon: '🦮' },
+  { id: 'all_level_50',   type: 'all_time', title: 'Golden Chester',    description: 'Get Chester to level 50',     target: 50,   reward: 1500, icon: '👑🐕‍🦺' },
 ];
 
 // ─── Helpers ───
