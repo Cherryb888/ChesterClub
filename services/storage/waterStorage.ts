@@ -7,7 +7,10 @@ import { getProfile } from './profileStorage';
 export async function getWaterLog(date?: string): Promise<WaterLog> {
   const key = date || getTodayKey();
   const data = await AsyncStorage.getItem(KEYS.WATER_PREFIX + key);
-  if (data) return JSON.parse(data);
+  if (data) {
+    try { return JSON.parse(data); }
+    catch { /* fall through to default */ }
+  }
   return { date: key, glasses: 0, goalReached: false };
 }
 

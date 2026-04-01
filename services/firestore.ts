@@ -50,6 +50,7 @@ export async function pullProfileFromCloud(): Promise<UserProfile | null> {
   if (!snap.exists()) return null;
 
   const data = snap.data();
+  if (!data) return null;
   // Remove Firestore-specific fields
   delete data.lastSyncedAt;
   return data as UserProfile;

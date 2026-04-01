@@ -8,53 +8,70 @@ function getLogKey(date: string): string {
   return KEYS.LOG_PREFIX + date;
 }
 
+// Simple per-key lock to prevent concurrent read-modify-write races
+const logLocks = new Map<string, Promise<any>>();
+function withLogLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = logLocks.get(key) ?? Promise.resolve();
+  const next = prev.then(fn, fn);
+  logLocks.set(key, next);
+  next.finally(() => { if (logLocks.get(key) === next) logLocks.delete(key); });
+  return next;
+}
+
 // ─── Daily Log ───
 
 export async function getDailyLog(date: string): Promise<DailyLog> {
   const data = await AsyncStorage.getItem(getLogKey(date));
-  if (data) return JSON.parse(data);
+  if (data) {
+    try { return JSON.parse(data); }
+    catch { /* fall through to default */ }
+  }
   return { date, items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 };
 }
 
-export async function addFoodToLog(item: FoodItem, date?: string): Promise<DailyLog> {
+export function addFoodToLog(item: FoodItem, date?: string): Promise<DailyLog> {
   const key = date || getTodayKey();
-  const log = await getDailyLog(key);
-  log.items.push(item);
-  recalcLogTotals(log);
-  await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
-  smartSync({ type: 'foodLog', date: key }).catch(() => {});
-  return log;
+  return withLogLock(key, async () => {
+    const log = await getDailyLog(key);
+    log.items.push(item);
+    recalcLogTotals(log);
+    await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
+    smartSync({ type: 'foodLog', date: key }).catch(() => {});
+    return log;
+  });
 }
 
-export async function removeFoodFromLog(itemId: string, date?: string): Promise<DailyLog> {
+export function removeFoodFromLog(itemId: string, date?: string): Promise<DailyLog> {
   const key = date || getTodayKey();
-  const log = await getDailyLog(key);
-  log.items = log.items.filter(i => i.id !== itemId);
-  recalcLogTotals(log);
-  await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
-  smartSync({ type: 'foodLog', date: key }).catch(() => {});
-  return log;
+  return withLogLock(key, async () => {
+    const log = await getDailyLog(key);
+    log.items = log.items.filter(i => i.id !== itemId);
+    recalcLogTotals(log);
+    await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
+    smartSync({ type: 'foodLog', date: key }).catch(() => {});
+    return log;
+  });
 }
 
 export async function getWeekLogs(): Promise<DailyLog[]> {
-  const logs: DailyLog[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000);
-    const key = d.toISOString().split('T')[0];
-    logs.push(await getDailyLog(key));
-  }
-  return logs;
+  const keys = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(Date.now() - (6 - i) * 86400000);
+    return d.toISOString().split('T')[0];
+  });
+  return Promise.all(keys.map(k => getDailyLog(k)));
 }
 
 export async function getMonthLogs(year: number, month: number): Promise<Record<string, DailyLog>> {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const logs: Record<string, DailyLog> = {};
+  const dates = Array.from({ length: daysInMonth }, (_, i) =>
+    `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`
+  );
+  const allLogs = await Promise.all(dates.map(d => getDailyLog(d)));
 
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const log = await getDailyLog(date);
-    if (log.items.length > 0) {
-      logs[date] = log;
+  const logs: Record<string, DailyLog> = {};
+  for (let i = 0; i < dates.length; i++) {
+    if (allLogs[i].items.length > 0) {
+      logs[dates[i]] = allLogs[i];
     }
   }
   return logs;
@@ -63,12 +80,17 @@ export async function getMonthLogs(year: number, month: number): Promise<Record<
 export async function getTotalMealsLogged(): Promise<number> {
   const keys = await AsyncStorage.getAllKeys();
   const logKeys = keys.filter(k => k.startsWith(KEYS.LOG_PREFIX));
+  if (logKeys.length === 0) return 0;
+  const entries = await AsyncStorage.multiGet(logKeys);
   let total = 0;
-  for (const key of logKeys) {
-    const data = await AsyncStorage.getItem(key);
+  for (const [, data] of entries) {
     if (data) {
-      const log: DailyLog = JSON.parse(data);
-      total += log.items.length;
+      try {
+        const log: DailyLog = JSON.parse(data);
+        total += log.items.length;
+      } catch {
+        // Skip corrupted entries
+      }
     }
   }
   return total;

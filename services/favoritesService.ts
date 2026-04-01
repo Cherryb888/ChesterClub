@@ -20,9 +20,13 @@ export interface FavoriteFood {
 export async function getFavorites(): Promise<FavoriteFood[]> {
   const data = await AsyncStorage.getItem(FAVORITES_KEY);
   if (!data) return [];
-  const favorites: FavoriteFood[] = JSON.parse(data);
-  // Sort by most frequently logged, then most recently logged
-  return favorites.sort((a, b) => b.timesLogged - a.timesLogged || b.lastLogged - a.lastLogged);
+  try {
+    const favorites: FavoriteFood[] = JSON.parse(data);
+    // Sort by most frequently logged, then most recently logged
+    return favorites.sort((a, b) => b.timesLogged - a.timesLogged || b.lastLogged - a.lastLogged);
+  } catch {
+    return [];
+  }
 }
 
 export async function addFavorite(item: FoodItem): Promise<FavoriteFood> {

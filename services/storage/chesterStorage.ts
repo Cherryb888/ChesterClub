@@ -175,6 +175,17 @@ export async function getWeeklyStats(): Promise<{
 }> {
   const profile = await getProfile();
   const today = new Date();
+  const keys = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    return d.toISOString().split('T')[0];
+  });
+
+  const [logs, waters] = await Promise.all([
+    Promise.all(keys.map(k => getDailyLog(k))),
+    Promise.all(keys.map(k => getWaterLog(k))),
+  ]);
+
   let totalMeals = 0;
   let totalCalories = 0;
   let totalScore = 0;
@@ -182,11 +193,8 @@ export async function getWeeklyStats(): Promise<{
   let daysLogged = 0;
 
   for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().split('T')[0];
-    const log = await getDailyLog(key);
-    const water = await getWaterLog(key);
+    const log = logs[i];
+    const water = waters[i];
 
     if (log.items.length > 0) {
       daysLogged++;

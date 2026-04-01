@@ -18,22 +18,24 @@ export default function DashboardScreen() {
 
   useFocusEffect(useCallback(() => {
     (async () => {
-      const logs = await getWeekLogs();
-      const profile = await getProfile();
+      const [logs, profile] = await Promise.all([getWeekLogs(), getProfile()]);
       setWeekLogs(logs);
       setChester(profile.chester);
       setGoals(profile.goals);
     })();
   }, []));
 
-  const avgCalories = weekLogs.length > 0
-    ? Math.round(weekLogs.reduce((s, l) => s + l.totalCalories, 0) / weekLogs.filter(l => l.items.length > 0).length || 0)
+  const daysWithFood = weekLogs.filter(l => l.items.length > 0).length;
+  const avgCalories = daysWithFood > 0
+    ? Math.round(weekLogs.reduce((s, l) => s + l.totalCalories, 0) / daysWithFood)
     : 0;
-  const avgProtein = weekLogs.length > 0
-    ? Math.round(weekLogs.reduce((s, l) => s + l.totalProtein, 0) / weekLogs.filter(l => l.items.length > 0).length || 0)
+  const avgProtein = daysWithFood > 0
+    ? Math.round(weekLogs.reduce((s, l) => s + l.totalProtein, 0) / daysWithFood)
     : 0;
   const totalMeals = weekLogs.reduce((s, l) => s + l.items.length, 0);
-  const maxCalories = Math.max(...weekLogs.map(l => l.totalCalories), goals.dailyCalories);
+  const maxCalories = weekLogs.length > 0
+    ? Math.max(...weekLogs.map(l => l.totalCalories), goals.dailyCalories)
+    : goals.dailyCalories;
 
   const stage = getChesterLifeStage(chester.level);
   const stageInfo = LIFE_STAGE_INFO[stage];
@@ -113,13 +115,13 @@ export default function DashboardScreen() {
             <MacroAvg label="Protein" value={avgProtein} goal={goals.dailyProtein} color={Colors.protein} />
             <MacroAvg
               label="Carbs"
-              value={weekLogs.length > 0 ? Math.round(weekLogs.reduce((s, l) => s + l.totalCarbs, 0) / weekLogs.filter(l => l.items.length > 0).length || 0) : 0}
+              value={daysWithFood > 0 ? Math.round(weekLogs.reduce((s, l) => s + l.totalCarbs, 0) / daysWithFood) : 0}
               goal={goals.dailyCarbs}
               color={Colors.carbs}
             />
             <MacroAvg
               label="Fat"
-              value={weekLogs.length > 0 ? Math.round(weekLogs.reduce((s, l) => s + l.totalFat, 0) / weekLogs.filter(l => l.items.length > 0).length || 0) : 0}
+              value={daysWithFood > 0 ? Math.round(weekLogs.reduce((s, l) => s + l.totalFat, 0) / daysWithFood) : 0}
               goal={goals.dailyFat}
               color={Colors.fat}
             />

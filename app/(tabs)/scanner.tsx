@@ -205,7 +205,7 @@ export default function ScannerScreen() {
 
         {result && <ChesterReaction message={result.chesterReaction} score={result.overallScore} visible={true} />}
 
-        {result?.foods.map((food, i) => (
+        {result?.foods?.map((food, i) => (
           <View key={i} style={styles.foodCard}>
             <Text style={styles.foodName}>{food.name}</Text>
             <Text style={styles.servingSize}>{food.servingSize}</Text>

@@ -32,11 +32,14 @@ export default function FriendsScreen() {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (isSignedIn) {
-      const code = await getMyFriendCode();
+      const [code, friendsList] = await Promise.all([
+        getMyFriendCode(),
+        getFriendsList(),
+      ]);
       setMyCode(code);
-      await publishPublicProfile();
-      const friendsList = await getFriendsList();
       setFriends(friendsList);
+      // Update public profile in the background (non-blocking)
+      publishPublicProfile().catch(() => {});
     }
     setLoading(false);
   }, [isSignedIn]);
@@ -47,17 +50,21 @@ export default function FriendsScreen() {
     if (!codeInput.trim()) return;
     setAddingFriend(true);
 
-    const result = await addFriendByCode(codeInput.trim());
-    if (result.success) {
-      Alert.alert('Friend Added!', `${result.friend?.displayName} is now your friend! 🐶`);
-      setCodeInput('');
-      setShowAddForm(false);
-      loadData();
-    } else {
-      Alert.alert('Error', result.error || 'Could not add friend');
+    try {
+      const result = await addFriendByCode(codeInput.trim());
+      if (result.success) {
+        Alert.alert('Friend Added!', `${result.friend?.displayName} is now your friend! 🐶`);
+        setCodeInput('');
+        setShowAddForm(false);
+        loadData();
+      } else {
+        Alert.alert('Error', result.error || 'Could not add friend');
+      }
+    } catch {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setAddingFriend(false);
     }
-
-    setAddingFriend(false);
   };
 
   const handleRemoveFriend = (friend: FriendProfile) => {

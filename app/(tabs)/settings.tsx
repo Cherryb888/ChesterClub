@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getSettings, saveSettings, exportAllData, getProfile,
   AppSettings,
@@ -27,9 +28,11 @@ export default function SettingsScreen() {
 
   useFocusEffect(useCallback(() => {
     (async () => {
-      const s = await getSettings();
-      const p = await getProfile();
-      const syncTime = await getLastSyncTime();
+      const [s, p, syncTime] = await Promise.all([
+        getSettings(),
+        getProfile(),
+        getLastSyncTime(),
+      ]);
       setSettings(s);
       setProfile(p);
       setLastSync(syncTime);
@@ -85,7 +88,6 @@ export default function SettingsScreen() {
                 { text: 'Cancel', style: 'cancel' },
                 {
                   text: 'Yes, Delete All', style: 'destructive', onPress: async () => {
-                    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
                     await AsyncStorage.clear();
                     Alert.alert('Data Cleared', 'All data has been deleted. The app will reset.');
                   }

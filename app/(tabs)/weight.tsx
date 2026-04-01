@@ -34,10 +34,14 @@ export default function WeightScreen() {
       Alert.alert('Invalid Weight', 'Please enter a valid weight.');
       return;
     }
-    await addWeightEntry(weight, unit);
-    setInputWeight('');
-    setShowInput(false);
-    await loadData();
+    try {
+      await addWeightEntry(weight, unit);
+      setInputWeight('');
+      setShowInput(false);
+      await loadData();
+    } catch {
+      Alert.alert('Error', 'Failed to save weight entry. Please try again.');
+    }
   };
 
   const handleDelete = (date: string) => {

@@ -24,11 +24,13 @@ export default function LogScreen() {
   const router = useRouter();
 
   const loadLog = useCallback(async () => {
-    const todayLog = await getDailyLog(getTodayKey());
-    const profile = await getProfile();
+    const [todayLog, profile, favs] = await Promise.all([
+      getDailyLog(getTodayKey()),
+      getProfile(),
+      getFavorites(),
+    ]);
     setLog(todayLog);
     setGoals(profile.goals);
-    const favs = await getFavorites();
     setFavoriteNames(new Set(favs.map(f => f.name.toLowerCase())));
   }, []);
 
@@ -177,7 +179,6 @@ const styles = StyleSheet.create({
   summaryGoal: { fontSize: FontSize.xs, color: Colors.textLight },
   divider: { width: 1, backgroundColor: Colors.border },
   emptyState: { alignItems: 'center', paddingVertical: Spacing.xxl },
-  emptyEmoji: { fontSize: 64 },
   emptyText: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text, marginTop: Spacing.md },
   emptySubtext: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs, textAlign: 'center' },
   scanBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.primary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg, marginTop: Spacing.lg },

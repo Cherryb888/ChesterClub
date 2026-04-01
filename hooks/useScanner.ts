@@ -44,19 +44,19 @@ export function useScanner() {
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.7 });
-    if (photo) {
+    if (photo?.base64) {
       setImageUri(photo.uri);
       setMode('preview');
-      analyzeImage(photo.base64!);
+      analyzeImage(photo.base64);
     }
   };
 
   const pickImage = async () => {
     const pickerResult = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, base64: true });
-    if (!pickerResult.canceled && pickerResult.assets[0]) {
+    if (!pickerResult.canceled && pickerResult.assets[0]?.base64) {
       setImageUri(pickerResult.assets[0].uri);
       setMode('preview');
-      analyzeImage(pickerResult.assets[0].base64!);
+      analyzeImage(pickerResult.assets[0].base64);
     }
   };
 

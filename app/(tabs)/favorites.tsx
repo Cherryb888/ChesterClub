@@ -7,7 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
-import { getFavorites, removeFavorite, favoriteToFoodItem, FavoriteFood } from '../../services/favoritesService';
+import { getFavorites, removeFavorite, favoriteToFoodItem, incrementFavoriteUsage, FavoriteFood } from '../../services/favoritesService';
 import { addFoodToLog, feedChester, addRecentFood, getTodayKey } from '../../services/storage';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import EmptyState from '../../components/ui/EmptyState';
@@ -46,8 +46,6 @@ export default function FavoritesScreen() {
       await addRecentFood(foodItem);
       await feedChester('good');
 
-      // Update usage count
-      const { incrementFavoriteUsage } = require('../../services/favoritesService');
       await incrementFavoriteUsage(fav.name);
 
       Alert.alert(
