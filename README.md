@@ -192,10 +192,10 @@ eas build --platform ios --profile production
 
 ### Must-Do
 - [ ] Deploy Cloud Functions and set `EXPO_PUBLIC_FUNCTIONS_URL` (removes Gemini key from client)
-- [ ] Write Firestore security rules (currently open — required before launch)
+- [x] Write Firestore security rules — `firestore.rules` created, deploy with `firebase deploy --only firestore:rules`
 - [ ] Add Chester stage-specific image assets — `chester-happy.png` is the only asset; avatar shows life-stage levels but renders the same image regardless
 - [ ] In-app purchases for Premium tier (StoreKit on iOS, Play Billing on Android) — gating logic is in place, just needs payment SDK wired up
-- [ ] Privacy Policy screen (required by App Store and Play Store)
+- [x] Privacy Policy screen — `app/(tabs)/privacy-policy.tsx`, linked from Settings > About. Fill in `CONTROLLER_NAME`, `CONTROLLER_EMAIL`, `CONTROLLER_COUNTRY` at the top of the file before publishing.
 
 ### Should-Do
 - [ ] Shop item visual previews (currently emoji icons — ideally small images per cosmetic)

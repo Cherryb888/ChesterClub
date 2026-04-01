@@ -293,9 +293,19 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
           <View style={styles.card}>
-            <SettingRow icon="paw-outline" label="ChesterClub" subtitle="Version 1.0.0" last>
+            <SettingRow icon="paw-outline" label="ChesterClub" subtitle="Version 1.0.0">
               <Text style={styles.versionText}>v1.0.0</Text>
             </SettingRow>
+
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/privacy-policy')}
+              accessibilityLabel="Privacy Policy"
+              accessibilityRole="button"
+            >
+              <SettingRow icon="shield-checkmark-outline" label="Privacy Policy" last>
+                <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
+              </SettingRow>
+            </TouchableOpacity>
           </View>
         </View>
 
