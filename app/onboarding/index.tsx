@@ -110,10 +110,10 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.progressBar}>
+      <View style={styles.progressBar} accessibilityRole="progressbar" accessibilityLabel={`Onboarding progress: step ${step + 1} of ${TOTAL_STEPS}`} accessibilityValue={{ min: 0, max: TOTAL_STEPS, now: step + 1 }}>
         <View style={[styles.progressFill, { width: `${((step + 1) / TOTAL_STEPS) * 100}%` }]} />
       </View>
-      <Text style={styles.stepCounter}>{step + 1} of {TOTAL_STEPS}</Text>
+      <Text style={styles.stepCounter} accessibilityRole="header" accessibilityLabel={`Step ${step + 1} of ${TOTAL_STEPS}`}>{step + 1} of {TOTAL_STEPS}</Text>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {renderStep()}
@@ -121,12 +121,12 @@ export default function OnboardingScreen() {
 
       <View style={styles.navRow}>
         {step > 0 ? (
-          <TouchableOpacity style={styles.backBtn} onPress={() => setStep(step - 1)}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => setStep(step - 1)} accessibilityRole="button" accessibilityLabel="Go back to previous step">
             <Ionicons name="arrow-back" size={20} color="#999" />
             <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
         ) : <View />}
-        <TouchableOpacity style={styles.nextBtn} onPress={step === TOTAL_STEPS - 1 ? finish : () => setStep(step + 1)}>
+        <TouchableOpacity style={styles.nextBtn} onPress={step === TOTAL_STEPS - 1 ? finish : () => setStep(step + 1)} accessibilityRole="button" accessibilityLabel={step === TOTAL_STEPS - 1 ? "Finish onboarding and start using the app" : "Continue to next step"}>
           <Text style={styles.nextBtnText}>{step === TOTAL_STEPS - 1 ? "Let's Go!" : 'Next'}</Text>
           <Ionicons name={step === TOTAL_STEPS - 1 ? 'paw' : 'arrow-forward'} size={20} color="#fff" />
         </TouchableOpacity>

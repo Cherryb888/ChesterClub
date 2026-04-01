@@ -101,19 +101,19 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Food Calendar</Text>
+        <Text style={styles.title} accessibilityRole="header">Food Calendar</Text>
         <Text style={styles.subtitle}>Tap any day to see what you ate</Text>
 
         {/* Month navigation */}
         <View style={styles.monthNav}>
-          <TouchableOpacity onPress={goToPrevMonth} style={[styles.navBtn, !canGoPrev() && { opacity: 0.3 }]} disabled={!canGoPrev()}>
+          <TouchableOpacity onPress={goToPrevMonth} style={[styles.navBtn, !canGoPrev() && { opacity: 0.3 }]} disabled={!canGoPrev()} accessibilityLabel="Previous month" accessibilityRole="button">
             <Ionicons name="chevron-back" size={24} color={Colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setPickerVisible(true)} style={styles.monthLabelBtn}>
+          <TouchableOpacity onPress={() => setPickerVisible(true)} style={styles.monthLabelBtn} accessibilityLabel={`${MONTHS[month]} ${year}, tap to pick month`} accessibilityRole="button">
             <Text style={styles.monthLabel}>{MONTHS[month]} {year}</Text>
             <Ionicons name="caret-down" size={14} color={Colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={goToNextMonth} style={[styles.navBtn, !canGoNext() && { opacity: 0.3 }]} disabled={!canGoNext()}>
+          <TouchableOpacity onPress={goToNextMonth} style={[styles.navBtn, !canGoNext() && { opacity: 0.3 }]} disabled={!canGoNext()} accessibilityLabel="Next month" accessibilityRole="button">
             <Ionicons name="chevron-forward" size={24} color={Colors.text} />
           </TouchableOpacity>
         </View>
@@ -169,6 +169,9 @@ export default function CalendarScreen() {
                     isSelected && styles.selectedCell,
                   ]}
                   onPress={() => selectDay(dateStr)}
+                  accessibilityLabel={`${MONTHS[month]} ${day}${isToday ? ', today' : ''}${hasLog ? ', has food log' : ''}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
                 >
                   <Text style={[
                     styles.dayText,

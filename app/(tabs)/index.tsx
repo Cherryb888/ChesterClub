@@ -174,25 +174,25 @@ export default function HomeScreen() {
     >
       {/* Header */}
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/dashboard')}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/dashboard')} accessibilityLabel="Dashboard" accessibilityRole="button">
           <Ionicons name="stats-chart" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.header}>ChesterClub</Text>
+        <Text style={styles.header} accessibilityRole="header">ChesterClub</Text>
         <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/insights')}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/insights')} accessibilityLabel="Insights" accessibilityRole="button">
             <Ionicons name="bulb-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/settings')} accessibilityLabel="Settings" accessibilityRole="button">
             <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} accessibilityLabel="Profile" accessibilityRole="button">
             <Ionicons name="person-circle" size={28} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Health bar — elongated heart, left-aligned */}
-      <View style={styles.healthBarContainer}>
+      <View style={styles.healthBarContainer} accessibilityLabel={`Chester health: ${chester.health} percent`}>
         <Text style={styles.healthHeart}>❤️</Text>
         <View style={styles.healthBarOuter}>
           <View style={[styles.healthBarFill, {
@@ -214,6 +214,8 @@ export default function HomeScreen() {
         style={styles.digEntryBtn}
         onPress={() => router.push('/(tabs)/daily-dig')}
         activeOpacity={0.8}
+        accessibilityLabel={digAvailable ? 'Daily Dig, Chester wants to dig!' : 'Daily Dig, come back tomorrow'}
+        accessibilityRole="button"
       >
         <Animated.View style={[styles.digEntryPaw, digAvailable && { transform: [{ scale: digPulse }] }]}>
           <Text style={styles.digEntryPawText}>🐾</Text>
@@ -263,7 +265,7 @@ export default function HomeScreen() {
           {waterLog.goalReached && <Text style={styles.goalBadge}>Goal Reached!</Text>}
         </View>
         <View style={styles.waterRow}>
-          <TouchableOpacity onPress={handleRemoveWater} style={styles.waterBtn}>
+          <TouchableOpacity onPress={handleRemoveWater} style={styles.waterBtn} accessibilityLabel="Remove water glass" accessibilityRole="button">
             <Ionicons name="remove-circle" size={32} color={Colors.textLight} />
           </TouchableOpacity>
           <View style={styles.waterGlasses}>
@@ -273,7 +275,7 @@ export default function HomeScreen() {
               </Text>
             ))}
           </View>
-          <TouchableOpacity onPress={handleAddWater} style={styles.waterBtn} disabled={waterLog.goalReached}>
+          <TouchableOpacity onPress={handleAddWater} style={styles.waterBtn} disabled={waterLog.goalReached} accessibilityLabel="Add water glass" accessibilityRole="button" accessibilityState={{ disabled: waterLog.goalReached }}>
             <Ionicons name="add-circle" size={32} color={waterLog.goalReached ? Colors.textLight : '#4FC3F7'} />
           </TouchableOpacity>
         </View>
@@ -285,7 +287,7 @@ export default function HomeScreen() {
       {/* Nutrition Score */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Nutrition Score</Text>
-        <View style={styles.scoreRow}>
+        <View style={styles.scoreRow} accessibilityLabel={`Nutrition score: ${nutritionScore} out of 100`}>
           <View style={[styles.scoreCircle, {
             borderColor: nutritionScore >= 80 ? Colors.success : nutritionScore >= 50 ? Colors.warning : Colors.error,
           }]}>
@@ -318,7 +320,7 @@ export default function HomeScreen() {
 
       {/* Meal Plan Preview */}
       {mealPlan && mealPlan.days.length > 0 && (
-        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/meal-plan')}>
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/meal-plan')} accessibilityLabel="View today's meal plan" accessibilityRole="button">
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>Today's Meal Plan 🍽️</Text>
             <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
@@ -339,11 +341,11 @@ export default function HomeScreen() {
 
       {/* Quick Actions */}
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/scanner')}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/scanner')} accessibilityLabel="Scan food" accessibilityRole="button">
           <Ionicons name="camera" size={28} color={Colors.surface} />
           <Text style={styles.actionText}>Scan Food</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.secondary }]} onPress={() => router.push('/(tabs)/favorites')}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.secondary }]} onPress={() => router.push('/(tabs)/favorites')} accessibilityLabel="Favorites" accessibilityRole="button">
           <Ionicons name="heart" size={28} color={Colors.surface} />
           <Text style={styles.actionText}>Favorites</Text>
         </TouchableOpacity>
@@ -381,20 +383,20 @@ export default function HomeScreen() {
         >
         {/* Club Header */}
         <View style={styles.clubHeader}>
-          <Text style={styles.clubTitle}>The Club</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/friends')} style={styles.shopBtn}>
+          <Text style={styles.clubTitle} accessibilityRole="header">The Club</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/friends')} style={styles.shopBtn} accessibilityLabel="Friends" accessibilityRole="button">
             <Ionicons name="people" size={18} color={Colors.primary} />
             <Text style={styles.shopBtnText}>Friends</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/feed')} style={styles.shopBtn}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/feed')} style={styles.shopBtn} accessibilityLabel="Activity feed" accessibilityRole="button">
             <Ionicons name="newspaper-outline" size={18} color={Colors.primary} />
             <Text style={styles.shopBtnText}>Feed</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/shop')} style={styles.shopBtn}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/shop')} style={styles.shopBtn} accessibilityLabel="Shop" accessibilityRole="button">
             <Ionicons name="bag-handle" size={18} color={Colors.primary} />
             <Text style={styles.shopBtnText}>Shop</Text>
           </TouchableOpacity>
-          <View style={styles.coinsBadge}>
+          <View style={styles.coinsBadge} accessibilityLabel={`${chester.coins} coins`}>
             <Text style={styles.coinsIcon}>🪙</Text>
             <Text style={styles.coinsText}>{chester.coins}</Text>
           </View>
@@ -402,19 +404,19 @@ export default function HomeScreen() {
 
         {/* Stats Summary */}
         <View style={styles.statsGrid}>
-          <View style={styles.statBox}>
+          <View style={styles.statBox} accessibilityLabel={`Day streak: ${chester.streak}${chester.streakShieldActive ? ', shield active' : ''}`}>
             <Text style={styles.statValue}>{chester.streak}{chester.streakShieldActive ? ' 🛡️' : ''}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
-          <View style={styles.statBox}>
+          <View style={styles.statBox} accessibilityLabel={`Today's meals: ${todayLog?.items.length || 0}`}>
             <Text style={styles.statValue}>{todayLog?.items.length || 0}</Text>
             <Text style={styles.statLabel}>Today's Meals</Text>
           </View>
-          <View style={styles.statBox}>
+          <View style={styles.statBox} accessibilityLabel={`Nutrition score: ${nutritionScore}`}>
             <Text style={styles.statValue}>{nutritionScore}</Text>
             <Text style={styles.statLabel}>Nutrition</Text>
           </View>
-          <View style={styles.statBox}>
+          <View style={styles.statBox} accessibilityLabel={`Chester level ${chester.level}`}>
             <Text style={styles.statValue}>Lv.{chester.level}</Text>
             <Text style={styles.statLabel}>Chester</Text>
           </View>
@@ -424,6 +426,8 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: Spacing.md }]}
           onPress={() => router.push('/(tabs)/leaderboard')}
+          accessibilityLabel="View leaderboard"
+          accessibilityRole="button"
         >
           <Text style={{ fontSize: 28 }}>🏆</Text>
           <View style={{ flex: 1 }}>
@@ -464,6 +468,9 @@ export default function HomeScreen() {
                 key={key}
                 style={[styles.challengeTab, challengeTab === key && styles.challengeTabActive]}
                 onPress={() => setChallengeTab(key)}
+                accessibilityLabel={`${label} challenges`}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: challengeTab === key }}
               >
                 <Text style={[styles.challengeTabText, challengeTab === key && styles.challengeTabTextActive]}>
                   {label}
@@ -493,6 +500,8 @@ export default function HomeScreen() {
                       <TouchableOpacity
                         style={styles.claimBtn}
                         onPress={() => handleClaimReward(challenge.id)}
+                        accessibilityLabel={`Claim ${challenge.reward} coins for ${challenge.title}`}
+                        accessibilityRole="button"
                       >
                         <Text style={styles.claimBtnText}>🪙 {challenge.reward}</Text>
                       </TouchableOpacity>
@@ -522,7 +531,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Badges */}
-        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/badges')}>
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/badges')} accessibilityLabel={`Badges, ${chester.achievements.length} earned`} accessibilityRole="button">
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>Badges</Text>
             <View style={styles.badgeCountPill}>
@@ -555,6 +564,8 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.card, { borderWidth: 1, borderColor: Colors.primary + '40' }]}
             onPress={() => setWeeklyRecapVisible(true)}
+            accessibilityLabel="View weekly recap"
+            accessibilityRole="button"
           >
             <View style={styles.cardHeaderRow}>
               <Text style={styles.cardTitle}>Weekly Recap</Text>
@@ -638,7 +649,7 @@ export default function HomeScreen() {
 function MacroStat({ label, value, goal, color, unit }: { label: string; value: number; goal: number; color: string; unit: string }) {
   const progress = Math.min(value / goal, 1);
   return (
-    <View style={styles.macroItem}>
+    <View style={styles.macroItem} accessibilityLabel={`${label}: ${Math.round(value)}${unit} of ${goal}${unit}`}>
       <Text style={[styles.macroValue, { color }]}>{Math.round(value)}{unit}</Text>
       <View style={styles.macroBar}>
         <View style={[styles.macroFill, { width: `${progress * 100}%`, backgroundColor: color }]} />

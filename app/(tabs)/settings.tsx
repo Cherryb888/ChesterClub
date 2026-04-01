@@ -105,7 +105,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.header}>Settings</Text>
+        <Text style={styles.header} accessibilityRole="header">Settings</Text>
 
         {/* Notifications */}
         <View style={styles.section}>
@@ -121,6 +121,8 @@ export default function SettingsScreen() {
                 onValueChange={(v) => updateSetting('mealReminders', v)}
                 trackColor={{ true: Colors.primary, false: Colors.border }}
                 thumbColor="#fff"
+                accessibilityLabel="Meal reminders"
+                accessibilityRole="switch"
               />
             </SettingRow>
 
@@ -134,6 +136,8 @@ export default function SettingsScreen() {
                 onValueChange={(v) => updateSetting('waterReminders', v)}
                 trackColor={{ true: Colors.primary, false: Colors.border }}
                 thumbColor="#fff"
+                accessibilityLabel="Water reminders"
+                accessibilityRole="switch"
               />
             </SettingRow>
 
@@ -148,6 +152,8 @@ export default function SettingsScreen() {
                 onValueChange={(v) => updateSetting('streakWarnings', v)}
                 trackColor={{ true: Colors.primary, false: Colors.border }}
                 thumbColor="#fff"
+                accessibilityLabel="Streak warnings"
+                accessibilityRole="switch"
               />
             </SettingRow>
           </View>
@@ -162,12 +168,18 @@ export default function SettingsScreen() {
                 <TouchableOpacity
                   style={[styles.unitBtn, settings.weightUnit === 'kg' && styles.unitBtnActive]}
                   onPress={() => updateSetting('weightUnit', 'kg')}
+                  accessibilityLabel="Kilograms"
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: settings.weightUnit === 'kg' }}
                 >
                   <Text style={[styles.unitBtnText, settings.weightUnit === 'kg' && styles.unitBtnTextActive]}>kg</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.unitBtn, settings.weightUnit === 'lbs' && styles.unitBtnActive]}
                   onPress={() => updateSetting('weightUnit', 'lbs')}
+                  accessibilityLabel="Pounds"
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: settings.weightUnit === 'lbs' }}
                 >
                   <Text style={[styles.unitBtnText, settings.weightUnit === 'lbs' && styles.unitBtnTextActive]}>lbs</Text>
                 </TouchableOpacity>
@@ -180,13 +192,13 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.card}>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} accessibilityLabel="Profile and Goals" accessibilityRole="button">
               <SettingRow icon="person-outline" label="Profile & Goals" subtitle={profile.displayName || 'Friend'}>
                 <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
               </SettingRow>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push('/(tabs)/premium')}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/premium')} accessibilityLabel="Premium" accessibilityRole="button">
               <SettingRow
                 icon="diamond-outline"
                 label="Premium"
@@ -200,7 +212,7 @@ export default function SettingsScreen() {
               </SettingRow>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push('/(tabs)/weight')}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/weight')} accessibilityLabel="Weight Tracker" accessibilityRole="button">
               <SettingRow icon="trending-down-outline" label="Weight Tracker" last>
                 <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
               </SettingRow>
@@ -249,7 +261,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data</Text>
           <View style={styles.card}>
-            <TouchableOpacity onPress={handleExportData} disabled={exporting}>
+            <TouchableOpacity onPress={handleExportData} disabled={exporting} accessibilityLabel="Export data" accessibilityRole="button">
               <SettingRow
                 icon="download-outline"
                 label="Export Data"
@@ -263,7 +275,7 @@ export default function SettingsScreen() {
               </SettingRow>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleClearData}>
+            <TouchableOpacity onPress={handleClearData} accessibilityLabel="Clear all data" accessibilityRole="button">
               <SettingRow
                 icon="trash-outline"
                 label="Clear All Data"

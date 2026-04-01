@@ -92,6 +92,9 @@ export default function FavoritesScreen() {
               key={type}
               style={[styles.mealTypeBtn, selectedMealType === type && styles.mealTypeBtnActive]}
               onPress={() => setSelectedMealType(type)}
+              accessibilityRole="button"
+              accessibilityLabel={`Log as ${type}`}
+              accessibilityState={{ selected: selectedMealType === type }}
             >
               <Text style={[styles.mealTypeBtnText, selectedMealType === type && styles.mealTypeBtnTextActive]}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -124,6 +127,10 @@ export default function FavoritesScreen() {
                 onPress={() => handleQuickLog(fav)}
                 disabled={logging === fav.id}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${fav.name}, ${fav.calories} calories, ${fav.protein}g protein, ${fav.carbs}g carbs, ${fav.fat}g fat`}
+                accessibilityHint={`Double tap to log as ${selectedMealType}`}
+                accessibilityState={{ disabled: logging === fav.id }}
               >
                 <View style={styles.favLeft}>
                   <Text style={styles.favName}>{fav.name}</Text>
@@ -156,6 +163,8 @@ export default function FavoritesScreen() {
                     style={styles.removeBtn}
                     onPress={() => handleRemoveFavorite(fav)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${fav.name} from favorites`}
                   >
                     <Ionicons name="heart-dislike-outline" size={18} color={Colors.error} />
                   </TouchableOpacity>

@@ -40,7 +40,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.header}>Profile & Settings</Text>
+        <Text style={styles.header} accessibilityRole="header">Profile & Settings</Text>
 
         {/* Profile Card */}
         <View style={styles.card}>
@@ -55,12 +55,14 @@ export default function ProfileScreen() {
                   value={editName}
                   onChangeText={setEditName}
                   placeholder="Your name"
+                  accessibilityLabel="Display name"
+                  accessibilityHint="Enter your display name"
                 />
               ) : (
                 <Text style={styles.profileName}>{profile.displayName || 'Friend'}</Text>
               )}
               <Text style={styles.profileEmail}>{profile.email || 'Local account'}</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/auth')} style={styles.accountLink}>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/auth')} style={styles.accountLink} accessibilityRole="button" accessibilityLabel={profile.email ? 'Manage Account' : 'Sign In or Create Account'}>
                 <Text style={styles.accountLinkText}>
                   {profile.email ? 'Manage Account' : 'Sign In / Create Account'}
                 </Text>
@@ -73,8 +75,8 @@ export default function ProfileScreen() {
         {/* Goals Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Daily Goals</Text>
-            <TouchableOpacity onPress={() => editing ? saveChanges() : setEditing(true)}>
+            <Text style={styles.cardTitle} accessibilityRole="header">Daily Goals</Text>
+            <TouchableOpacity onPress={() => editing ? saveChanges() : setEditing(true)} accessibilityRole="button" accessibilityLabel={editing ? 'Save daily goals' : 'Edit daily goals'}>
               <Text style={styles.editBtn}>{editing ? 'Save' : 'Edit'}</Text>
             </TouchableOpacity>
           </View>
@@ -103,10 +105,10 @@ export default function ProfileScreen() {
 
         {/* Chester Info */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Chester Stats</Text>
+          <Text style={styles.cardTitle} accessibilityRole="header">Chester Stats</Text>
           <View style={styles.chesterProfileRow}>
             <View style={styles.chesterImageSmall}>
-              <Image source={CHESTER_IMAGE} style={styles.chesterImg} resizeMode="cover" />
+              <Image source={CHESTER_IMAGE} style={styles.chesterImg} resizeMode="cover" accessibilityLabel="Chester the dog" />
             </View>
             <View style={styles.chesterStats}>
               <StatItem label="Level" value={String(profile.chester.level)} />
@@ -120,13 +122,13 @@ export default function ProfileScreen() {
 
         {/* Quick Links */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>More</Text>
-          <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/(tabs)/weight')}>
+          <Text style={styles.cardTitle} accessibilityRole="header">More</Text>
+          <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/(tabs)/weight')} accessibilityRole="button" accessibilityLabel="Weight Tracker">
             <Ionicons name="trending-down" size={20} color={Colors.primary} />
             <Text style={styles.linkText}>Weight Tracker</Text>
             <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/(tabs)/premium')}>
+          <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/(tabs)/premium')} accessibilityRole="button" accessibilityLabel="Premium">
             <Ionicons name="diamond" size={20} color="#FFD700" />
             <Text style={styles.linkText}>Premium</Text>
             {profile.isPremiumMax && (
@@ -136,7 +138,7 @@ export default function ProfileScreen() {
             )}
             <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.linkRow, { borderBottomWidth: 0 }]} onPress={() => router.push('/(tabs)/settings')}>
+          <TouchableOpacity style={[styles.linkRow, { borderBottomWidth: 0 }]} onPress={() => router.push('/(tabs)/settings')} accessibilityRole="button" accessibilityLabel="Settings">
             <Ionicons name="settings" size={20} color={Colors.textSecondary} />
             <Text style={styles.linkText}>Settings</Text>
             <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />
@@ -145,7 +147,7 @@ export default function ProfileScreen() {
 
         {/* App Info */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>About</Text>
+          <Text style={styles.cardTitle} accessibilityRole="header">About</Text>
           <Text style={styles.aboutText}>ChesterClub v1.0.0</Text>
           <Text style={styles.aboutText}>AI-powered food scanner & macro tracker</Text>
           <Text style={styles.aboutText}>Your companion Chester is always here to help!</Text>
@@ -169,6 +171,8 @@ function GoalRow({ icon, label, value, unit, color, editing, onChange }: {
           value={String(value)}
           onChangeText={(t) => onChange(parseInt(t) || 0)}
           keyboardType="numeric"
+          accessibilityLabel={`${label} goal`}
+          accessibilityHint={`Enter your daily ${label.toLowerCase()} goal in ${unit}`}
         />
       ) : (
         <Text style={[styles.goalValue, { color }]}>{value} {unit}</Text>
@@ -179,7 +183,7 @@ function GoalRow({ icon, label, value, unit, color, editing, onChange }: {
 
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.statItem}>
+    <View style={styles.statItem} accessibilityLabel={`${label}: ${value}`}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>

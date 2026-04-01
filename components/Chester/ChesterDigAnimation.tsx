@@ -100,6 +100,7 @@ export default function ChesterDigAnimation({ phase, size = 220 }: Props) {
           source={DIG_FRAMES[frameIndex]}
           style={{ width: size, height: size * 0.65, borderRadius: 12 }}
           resizeMode="contain"
+          accessibilityLabel={phase === 'digging' ? 'Chester is digging' : phase === 'reveal' ? 'Chester found something' : 'Chester ready to dig'}
         />
       </Animated.View>
     </View>

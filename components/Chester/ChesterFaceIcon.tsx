@@ -13,6 +13,7 @@ export default function ChesterFaceIcon({ size = 24 }: Props) {
       source={CHESTER_FACE}
       style={[styles.face, { width: size, height: size, borderRadius: size / 2 }]}
       resizeMode="cover"
+      accessibilityLabel="Chester"
     />
   );
 }

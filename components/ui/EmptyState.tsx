@@ -18,7 +18,12 @@ export default function EmptyState({ icon, title, message, buttonLabel, buttonIc
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyText}>{message}</Text>
       {buttonLabel && onPress && (
-        <TouchableOpacity style={styles.actionBtn} onPress={onPress}>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={onPress}
+          accessibilityLabel={buttonLabel}
+          accessibilityRole="button"
+        >
           {buttonIcon}
           <Text style={styles.actionBtnText}>{buttonLabel}</Text>
         </TouchableOpacity>

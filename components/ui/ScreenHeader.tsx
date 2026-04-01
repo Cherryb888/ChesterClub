@@ -13,10 +13,14 @@ export default function ScreenHeader({ title, rightElement }: ScreenHeaderProps)
   const router = useRouter();
   return (
     <View style={styles.headerRow}>
-      <TouchableOpacity onPress={() => router.back()}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        accessibilityLabel="Go back"
+        accessibilityRole="button"
+      >
         <Ionicons name="arrow-back" size={24} color={Colors.text} />
       </TouchableOpacity>
-      <Text style={styles.header}>{title}</Text>
+      <Text style={styles.header} accessibilityRole="header">{title}</Text>
       {rightElement || <View style={{ width: 24 }} />}
     </View>
   );

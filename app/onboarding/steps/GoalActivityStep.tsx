@@ -16,12 +16,15 @@ export default function GoalActivityStep({ fitnessGoal, setFitnessGoal, activity
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepEmoji}>🎯</Text>
-      <Text style={styles.title}>Your Goal</Text>
+      <Text style={styles.title} accessibilityRole="header">Your Goal</Text>
       {GOAL_OPTIONS.map(opt => (
         <TouchableOpacity
           key={opt.value}
           style={[styles.cardOption, fitnessGoal === opt.value && styles.cardOptionActive]}
           onPress={() => setFitnessGoal(opt.value)}
+          accessibilityLabel={`${opt.label}: ${opt.description}`}
+          accessibilityRole="button"
+          accessibilityState={{ selected: fitnessGoal === opt.value }}
         >
           <Text style={styles.cardOptionIcon}>{opt.icon}</Text>
           <View style={styles.cardOptionText}>
@@ -36,6 +39,9 @@ export default function GoalActivityStep({ fitnessGoal, setFitnessGoal, activity
           key={idx}
           style={[styles.cardOption, activityLevel === idx && styles.cardOptionActive]}
           onPress={() => setActivityLevel(idx)}
+          accessibilityLabel={`${level.label}: ${level.description}`}
+          accessibilityRole="button"
+          accessibilityState={{ selected: activityLevel === idx }}
         >
           <View style={styles.cardOptionText}>
             <Text style={[styles.cardOptionTitle, activityLevel === idx && styles.cardOptionTitleActive]}>{level.label}</Text>

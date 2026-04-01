@@ -86,10 +86,12 @@ export default function WeightScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
-          <Text style={styles.header}>Weight Tracker</Text>
+          <Text style={styles.header} accessibilityRole="header">Weight Tracker</Text>
           <TouchableOpacity
             style={styles.addBtn}
             onPress={() => setShowInput(!showInput)}
+            accessibilityRole="button"
+            accessibilityLabel={showInput ? 'Close weight input' : 'Add weight entry'}
           >
             <Ionicons name={showInput ? 'close' : 'add'} size={24} color="#fff" />
           </TouchableOpacity>
@@ -108,9 +110,11 @@ export default function WeightScreen() {
                 placeholderTextColor={Colors.textLight}
                 keyboardType="decimal-pad"
                 autoFocus
+                accessibilityLabel={`Weight in ${unit}`}
+                accessibilityHint="Enter your current weight"
               />
               <Text style={styles.unitLabel}>{unit}</Text>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleAdd}>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleAdd} accessibilityLabel="Save weight entry" accessibilityRole="button">
                 <Text style={styles.saveBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -120,7 +124,7 @@ export default function WeightScreen() {
         {/* Current Stats */}
         {latestWeight !== null && (
           <View style={styles.statsRow}>
-            <View style={styles.statCard}>
+            <View style={styles.statCard} accessibilityLabel={`Current weight: ${latestWeight.toFixed(1)} ${unit}`}>
               <Text style={styles.statValue}>{latestWeight.toFixed(1)}</Text>
               <Text style={styles.statUnit}>{unit}</Text>
               <Text style={styles.statLabel}>Current</Text>
@@ -222,6 +226,9 @@ export default function WeightScreen() {
                   key={entry.date}
                   style={styles.historyRow}
                   onLongPress={() => handleDelete(entry.date)}
+                  accessibilityLabel={`${formatDateFull(entry.date)}: ${entry.weight.toFixed(1)} ${unit}${change !== null ? `, change ${change > 0 ? '+' : ''}${change.toFixed(1)}` : ''}`}
+                  accessibilityHint="Long press to delete"
+                  accessibilityRole="button"
                 >
                   <View style={styles.historyDate}>
                     <Text style={styles.historyDateText}>{formatDateFull(entry.date)}</Text>

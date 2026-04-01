@@ -36,7 +36,7 @@ export default function BadgesScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Progress bar */}
-        <View style={styles.progressContainer}>
+        <View style={styles.progressContainer} accessibilityLabel={`Badge progress: ${unlockedCount} of ${ACHIEVEMENTS.length} unlocked, ${Math.round((unlockedCount / ACHIEVEMENTS.length) * 100)}% complete`}>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${(unlockedCount / ACHIEVEMENTS.length) * 100}%` }]} />
           </View>
@@ -53,7 +53,7 @@ export default function BadgesScreen() {
             <View key={rarity} style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[rarity] }]} />
-                <Text style={[styles.sectionTitle, { color: RARITY_COLORS[rarity] }]}>
+                <Text style={[styles.sectionTitle, { color: RARITY_COLORS[rarity] }]} accessibilityRole="header">
                   {rarity.charAt(0).toUpperCase() + rarity.slice(1)}
                 </Text>
                 <Text style={styles.sectionCount}>
@@ -71,6 +71,9 @@ export default function BadgesScreen() {
                         isUnlocked && { borderColor: RARITY_COLORS[badge.rarity] + '60' },
                       ]}
                       onPress={() => setSelected(badge)}
+                      accessibilityRole="button"
+                      accessibilityLabel={isUnlocked ? `${badge.title}, ${badge.rarity} badge, unlocked` : `Locked ${badge.rarity} badge`}
+                      accessibilityHint="Double tap to view badge details"
                     >
                       <View style={[
                         styles.badgeIcon,
@@ -99,6 +102,8 @@ export default function BadgesScreen() {
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setSelected(null)}
+          accessibilityRole="button"
+          accessibilityLabel="Close badge details"
         >
           {selected && (
             <View style={styles.modalCard}>
@@ -117,7 +122,7 @@ export default function BadgesScreen() {
                   {selected.rarity.toUpperCase()}
                 </Text>
               </View>
-              <Text style={styles.modalTitle}>
+              <Text style={styles.modalTitle} accessibilityRole="header">
                 {unlocked.includes(selected.id) ? selected.title : '???'}
               </Text>
               <Text style={styles.modalDesc}>

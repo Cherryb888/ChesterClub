@@ -5,7 +5,7 @@ import { Colors } from '../../constants/theme';
 export default function LoadingScreen() {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={Colors.primary} />
+      <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Loading" />
     </View>
   );
 }

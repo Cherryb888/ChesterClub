@@ -87,7 +87,7 @@ export default function FeedScreen() {
           items.map(item => {
             const style = TYPE_STYLES[item.type] || TYPE_STYLES.meal;
             return (
-              <View key={item.id} style={[styles.feedCard, { backgroundColor: style.bg }]}>
+              <View key={item.id} style={[styles.feedCard, { backgroundColor: style.bg }]} accessibilityLabel={`${item.isMe ? 'You' : item.displayName}: ${item.title}. ${item.subtitle}. ${timeAgo(item.timestamp)}`}>
                 <View style={styles.feedHeader}>
                   <View style={[styles.iconCircle, { backgroundColor: style.accent + '20' }]}>
                     <Text style={styles.feedIcon}>{item.icon}</Text>

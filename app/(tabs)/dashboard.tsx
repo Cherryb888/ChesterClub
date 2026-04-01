@@ -43,22 +43,22 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.header}>Dashboard</Text>
+        <Text style={styles.header} accessibilityRole="header">Dashboard</Text>
         <Text style={styles.subtitle}>Your weekly overview</Text>
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <View style={styles.statCard} accessibilityLabel={`Day streak: ${chester.streak}`}>
             <Text style={styles.statEmoji}>🔥</Text>
             <Text style={styles.statValue}>{chester.streak}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={styles.statCard} accessibilityLabel={`Meals logged: ${totalMeals}`}>
             <Text style={styles.statEmoji}>🍽</Text>
             <Text style={styles.statValue}>{totalMeals}</Text>
             <Text style={styles.statLabel}>Meals Logged</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={styles.statCard} accessibilityLabel={`Average calories: ${avgCalories}`}>
             <Text style={styles.statEmoji}>⚡</Text>
             <Text style={styles.statValue}>{avgCalories}</Text>
             <Text style={styles.statLabel}>Avg Calories</Text>
@@ -137,6 +137,7 @@ export default function DashboardScreen() {
                 source={CHESTER_IMAGE}
                 style={styles.chesterImage}
                 resizeMode="cover"
+                accessibilityLabel="Chester the dog"
               />
             </View>
             <View style={styles.chesterInfo}>
@@ -161,7 +162,7 @@ export default function DashboardScreen() {
 function MacroAvg({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
   const pct = goal > 0 ? Math.min(value / goal, 1) : 0;
   return (
-    <View style={styles.macroAvgItem}>
+    <View style={styles.macroAvgItem} accessibilityLabel={`${label}: ${value}g of ${goal}g goal, ${Math.round(pct * 100)} percent`}>
       <View style={[styles.macroRing, { borderColor: color + '30' }]}>
         <Text style={[styles.macroRingValue, { color }]}>{Math.round(pct * 100)}%</Text>
       </View>

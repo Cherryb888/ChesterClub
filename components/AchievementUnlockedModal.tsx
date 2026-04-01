@@ -89,7 +89,7 @@ export default function AchievementUnlockedModal({ achievement, visible, onClose
           ))
         )}
 
-        <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
+        <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]} accessibilityRole="alert" accessibilityLabel={`Achievement unlocked: ${achievement.title}. ${achievement.description}`}>
           {/* Rarity banner */}
           <View style={[styles.rarityBanner, { backgroundColor: rarityColor }]}>
             <Text style={styles.rarityText}>
@@ -125,7 +125,12 @@ export default function AchievementUnlockedModal({ achievement, visible, onClose
           </View>
 
           {/* Dismiss */}
-          <TouchableOpacity style={[styles.button, { backgroundColor: rarityColor }]} onPress={onClose}>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: rarityColor }]}
+            onPress={onClose}
+            accessibilityLabel="Dismiss achievement"
+            accessibilityRole="button"
+          >
             <Text style={styles.buttonText}>Awesome!</Text>
           </TouchableOpacity>
         </Animated.View>
