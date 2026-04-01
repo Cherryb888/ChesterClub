@@ -34,7 +34,7 @@ export default function AuthScreen() {
           <Ionicons name="cloud-offline-outline" size={64} color={Colors.textLight} />
           <Text style={styles.errorTitle}>Firebase Not Configured</Text>
           <Text style={styles.errorText}>Add your Firebase config to .env to enable accounts and cloud sync.</Text>
-          <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backLink} onPress={() => router.back()} accessibilityLabel="Go back" accessibilityRole="button">
             <Text style={styles.backLinkText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -47,7 +47,7 @@ export default function AuthScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} accessibilityLabel="Go back" accessibilityRole="button">
             <Ionicons name="arrow-back" size={24} color={Colors.text} />
           </TouchableOpacity>
 
@@ -63,8 +63,8 @@ export default function AuthScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.syncBtn} onPress={() => handleSyncNow(setLoading)} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : (
+          <TouchableOpacity style={styles.syncBtn} onPress={() => handleSyncNow(setLoading)} disabled={loading} accessibilityLabel="Sync now" accessibilityRole="button">
+            {loading ? <ActivityIndicator color="#fff" accessibilityLabel="Syncing" /> : (
               <>
                 <Ionicons name="cloud-upload" size={20} color="#fff" />
                 <Text style={styles.syncBtnText}>Sync Now</Text>
@@ -72,7 +72,7 @@ export default function AuthScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} accessibilityLabel="Sign out" accessibilityRole="button">
             <Ionicons name="log-out-outline" size={20} color={Colors.error} />
             <Text style={styles.signOutBtnText}>Sign Out</Text>
           </TouchableOpacity>
@@ -90,7 +90,7 @@ export default function AuthScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Text style={styles.title}>
+          <Text style={styles.title} accessibilityRole="header">
             {mode === 'sign_in' ? 'Welcome Back' : mode === 'sign_up' ? 'Create Account' : 'Reset Password'}
           </Text>
           <Text style={styles.subtitle}>
@@ -104,12 +104,12 @@ export default function AuthScreen() {
 
         {mode !== 'reset_password' && (
           <View style={styles.socialSection}>
-            <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleSignIn} disabled={loading}>
+            <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleSignIn} disabled={loading} accessibilityLabel="Continue with Google" accessibilityRole="button">
               <Text style={styles.googleIcon}>G</Text>
               <Text style={styles.googleBtnText}>Continue with Google</Text>
             </TouchableOpacity>
             {isAppleSignInAvailable() && (
-              <TouchableOpacity style={styles.appleBtn} onPress={handleAppleSignIn} disabled={loading}>
+              <TouchableOpacity style={styles.appleBtn} onPress={handleAppleSignIn} disabled={loading} accessibilityLabel="Continue with Apple" accessibilityRole="button">
                 <Ionicons name="logo-apple" size={20} color="#fff" />
                 <Text style={styles.appleBtnText}>Continue with Apple</Text>
               </TouchableOpacity>
@@ -136,6 +136,8 @@ export default function AuthScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                accessibilityLabel="Email address"
+                accessibilityHint="Enter your email"
               />
             </View>
           </View>
@@ -152,8 +154,10 @@ export default function AuthScreen() {
                   placeholder="Min 6 characters"
                   placeholderTextColor={Colors.textLight}
                   secureTextEntry={!showPassword}
+                  accessibilityLabel="Password"
+                  accessibilityHint="Minimum 6 characters"
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} accessibilityLabel={showPassword ? 'Hide password' : 'Show password'} accessibilityRole="button">
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.textLight} />
                 </TouchableOpacity>
               </View>
@@ -172,19 +176,21 @@ export default function AuthScreen() {
                   placeholder="Confirm password"
                   placeholderTextColor={Colors.textLight}
                   secureTextEntry={!showPassword}
+                  accessibilityLabel="Confirm password"
+                  accessibilityHint="Re-enter your password"
                 />
               </View>
             </View>
           )}
 
           {mode === 'sign_in' && (
-            <TouchableOpacity onPress={() => setMode('reset_password')} style={styles.forgotLink}>
+            <TouchableOpacity onPress={() => setMode('reset_password')} style={styles.forgotLink} accessibilityLabel="Forgot password" accessibilityRole="button">
               <Text style={styles.forgotLinkText}>Forgot password?</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.submitBtn} onPress={handleEmailAuth} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : (
+          <TouchableOpacity style={styles.submitBtn} onPress={handleEmailAuth} disabled={loading} accessibilityLabel={mode === 'sign_in' ? 'Sign in' : mode === 'sign_up' ? 'Create account' : 'Send reset link'} accessibilityRole="button">
+            {loading ? <ActivityIndicator color="#fff" accessibilityLabel="Loading" /> : (
               <Text style={styles.submitBtnText}>
                 {mode === 'sign_in' ? 'Sign In' : mode === 'sign_up' ? 'Create Account' : 'Send Reset Link'}
               </Text>
@@ -194,11 +200,11 @@ export default function AuthScreen() {
 
         <View style={styles.toggleRow}>
           {mode === 'reset_password' ? (
-            <TouchableOpacity onPress={() => setMode('sign_in')}>
+            <TouchableOpacity onPress={() => setMode('sign_in')} accessibilityLabel="Back to sign in" accessibilityRole="button">
               <Text style={styles.toggleText}>Back to <Text style={styles.toggleLink}>Sign In</Text></Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={() => setMode(mode === 'sign_in' ? 'sign_up' : 'sign_in')}>
+            <TouchableOpacity onPress={() => setMode(mode === 'sign_in' ? 'sign_up' : 'sign_in')} accessibilityLabel={mode === 'sign_in' ? 'Switch to sign up' : 'Switch to sign in'} accessibilityRole="button">
               <Text style={styles.toggleText}>
                 {mode === 'sign_in' ? "Don't have an account? " : 'Already have an account? '}
                 <Text style={styles.toggleLink}>{mode === 'sign_in' ? 'Sign Up' : 'Sign In'}</Text>

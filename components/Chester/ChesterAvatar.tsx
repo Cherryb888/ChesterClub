@@ -90,7 +90,7 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
   const imageOpacity = chester.mood === 'sad' ? 0.7 : chester.mood === 'sleepy' ? 0.8 : 1;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessibilityLabel={`Chester the dog, level ${chester.level} ${stageInfo.name}, mood ${MOOD_LABELS[chester.mood]}, health ${chester.health} percent`} accessibilityRole="image">
       {/* Golden aura for champion/golden stages */}
       {(stage === 'golden' || stage === 'champion') && (
         <View style={[styles.aura, {
@@ -124,6 +124,7 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
               opacity: imageOpacity,
             }]}
             resizeMode="cover"
+            accessibilityLabel="Chester the dog"
           />
 
           {/* Sleepy overlay */}

@@ -89,7 +89,7 @@ export default function MealPlanScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Meal Planner</Text>
+        <Text style={styles.title} accessibilityRole="header">Meal Planner</Text>
         <Text style={styles.subtitle}>AI-powered weekly meal suggestions</Text>
 
         {/* Generate button */}
@@ -97,6 +97,9 @@ export default function MealPlanScreen() {
           style={[styles.generateBtn, loading && { opacity: 0.7 }]}
           onPress={generateNewPlan}
           disabled={loading}
+          accessibilityLabel={loading ? 'Generating meal plan' : mealPlan ? 'Generate new meal plan' : 'Plan my week'}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: loading }}
         >
           {loading ? (
             <View style={styles.loadingRow}>
@@ -154,6 +157,10 @@ export default function MealPlanScreen() {
                 <TouchableOpacity
                   style={styles.dayHeader}
                   onPress={() => setExpandedDay(expandedDay === dayIdx ? -1 : dayIdx)}
+                  accessibilityLabel={`${getDayLabel(dayIdx)}, ${day.totalCalories} calories`}
+                  accessibilityRole="button"
+                  accessibilityHint={expandedDay === dayIdx ? 'Collapse day' : 'Expand to see meals'}
+                  accessibilityState={{ expanded: expandedDay === dayIdx }}
                 >
                   <View>
                     <Text style={styles.dayTitle}>
@@ -184,6 +191,8 @@ export default function MealPlanScreen() {
                             <TouchableOpacity
                               style={styles.logBtn}
                               onPress={() => logMealToday(meal, mealType)}
+                              accessibilityLabel={`Log ${meal.name} to today`}
+                              accessibilityRole="button"
                             >
                               <Ionicons name="add-circle" size={20} color={Colors.primary} />
                               <Text style={styles.logBtnText}>Log</Text>

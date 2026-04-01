@@ -89,7 +89,11 @@ export default function FriendsScreen() {
         <ScreenHeader
           title="Friends"
           rightElement={
-            <TouchableOpacity onPress={() => setShowAddForm(!showAddForm)}>
+            <TouchableOpacity
+              onPress={() => setShowAddForm(!showAddForm)}
+              accessibilityLabel={showAddForm ? 'Close add friend form' : 'Add a friend'}
+              accessibilityRole="button"
+            >
               <Ionicons name={showAddForm ? 'close' : 'person-add'} size={24} color={Colors.primary} />
             </TouchableOpacity>
           }
@@ -110,10 +114,15 @@ export default function FriendsScreen() {
           <>
             {/* My Friend Code */}
             <View style={styles.codeCard}>
-              <Text style={styles.codeLabel}>Your Friend Code</Text>
+              <Text style={styles.codeLabel} accessibilityRole="header">Your Friend Code</Text>
               <Text style={styles.codeValue}>{myCode}</Text>
               <Text style={styles.codeHint}>Share this code so friends can add you</Text>
-              <TouchableOpacity style={styles.shareBtn} onPress={handleShareCode}>
+              <TouchableOpacity
+                style={styles.shareBtn}
+                onPress={handleShareCode}
+                accessibilityLabel="Share your friend code"
+                accessibilityRole="button"
+              >
                 <Ionicons name="share-outline" size={18} color="#fff" />
                 <Text style={styles.shareBtnText}>Share Code</Text>
               </TouchableOpacity>
@@ -122,7 +131,7 @@ export default function FriendsScreen() {
             {/* Add Friend Form */}
             {showAddForm && (
               <View style={styles.addCard}>
-                <Text style={styles.addTitle}>Add a Friend</Text>
+                <Text style={styles.addTitle} accessibilityRole="header">Add a Friend</Text>
                 <TextInput
                   style={styles.codeInputField}
                   value={codeInput}
@@ -131,11 +140,16 @@ export default function FriendsScreen() {
                   placeholderTextColor={Colors.textLight}
                   autoCapitalize="characters"
                   maxLength={9}
+                  accessibilityLabel="Friend code"
+                  accessibilityHint="Enter a friend code like ABCD-1234 to add them"
                 />
                 <TouchableOpacity
                   style={[styles.addBtn, !codeInput.trim() && styles.addBtnDisabled]}
                   onPress={handleAddFriend}
                   disabled={!codeInput.trim() || addingFriend}
+                  accessibilityLabel="Add friend"
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !codeInput.trim() || addingFriend }}
                 >
                   {addingFriend ? (
                     <ActivityIndicator size="small" color="#fff" />
@@ -147,7 +161,7 @@ export default function FriendsScreen() {
             )}
 
             {/* Friends List */}
-            <Text style={styles.sectionTitle}>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
               Your Friends ({friends.length})
             </Text>
 
@@ -159,7 +173,11 @@ export default function FriendsScreen() {
               </View>
             ) : (
               friends.map(friend => (
-                <View key={friend.uid} style={styles.friendCard}>
+                <View
+                  key={friend.uid}
+                  style={styles.friendCard}
+                  accessibilityLabel={`${friend.displayName}, level ${friend.chesterLevel}, ${friend.streak} day streak, ${friend.achievementCount} badges, Chester is ${friend.chesterMood}`}
+                >
                   <View style={styles.friendLeft}>
                     <Text style={styles.friendEmoji}>
                       {getLifeStageEmoji(friend.lifeStage)}
@@ -181,6 +199,8 @@ export default function FriendsScreen() {
                   <TouchableOpacity
                     onPress={() => handleRemoveFriend(friend)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityLabel={`More options for ${friend.displayName}`}
+                    accessibilityRole="button"
                   >
                     <Ionicons name="ellipsis-vertical" size={20} color={Colors.textLight} />
                   </TouchableOpacity>

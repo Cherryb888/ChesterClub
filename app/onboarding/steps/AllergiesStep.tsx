@@ -15,7 +15,7 @@ export default function AllergiesStep({ allergies, toggleAllergy, dislikedFoods,
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepEmoji}>⚠️</Text>
-      <Text style={styles.title}>Allergies & Dislikes</Text>
+      <Text style={styles.title} accessibilityRole="header">Allergies & Dislikes</Text>
       <Text style={styles.subtitle}>We'll make sure to avoid these in your meal plans</Text>
       <Text style={styles.sectionLabel}>Allergies</Text>
       <View style={styles.chipGrid}>
@@ -24,6 +24,9 @@ export default function AllergiesStep({ allergies, toggleAllergy, dislikedFoods,
             key={opt.id}
             style={[styles.chip, allergies.includes(opt.id) && styles.chipActiveRed]}
             onPress={() => toggleAllergy(opt.id)}
+            accessibilityLabel={opt.label}
+            accessibilityRole="button"
+            accessibilityState={{ selected: allergies.includes(opt.id) }}
           >
             <Text style={styles.chipIcon}>{opt.icon}</Text>
             <Text style={[styles.chipLabel, allergies.includes(opt.id) && styles.chipLabelActive]}>{opt.label}</Text>
@@ -39,6 +42,8 @@ export default function AllergiesStep({ allergies, toggleAllergy, dislikedFoods,
         value={dislikedFoods}
         onChangeText={setDislikedFoods}
         multiline
+        accessibilityLabel="Foods you don't like"
+        accessibilityHint="Enter comma-separated foods to avoid"
       />
     </View>
   );

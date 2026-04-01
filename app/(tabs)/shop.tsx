@@ -106,7 +106,7 @@ export default function ShopScreen() {
       <ScreenHeader
         title="Chester's Shop"
         rightElement={
-          <View style={styles.coinsBadge}>
+          <View style={styles.coinsBadge} accessibilityLabel={`${coins} coins available`}>
             <Text style={styles.coinsIcon}>🪙</Text>
             <Text style={styles.coinsText}>{coins}</Text>
           </View>
@@ -120,6 +120,9 @@ export default function ShopScreen() {
             key={cat}
             style={[styles.categoryTab, activeCategory === cat && styles.categoryTabActive]}
             onPress={() => setActiveCategory(cat)}
+            accessibilityRole="button"
+            accessibilityLabel={`${CATEGORY_LABELS[cat].label} category`}
+            accessibilityState={{ selected: activeCategory === cat }}
           >
             <Text style={styles.categoryIcon}>{CATEGORY_LABELS[cat].icon}</Text>
             <Text style={[styles.categoryLabel, activeCategory === cat && styles.categoryLabelActive]}>
@@ -149,6 +152,9 @@ export default function ShopScreen() {
                 ]}
                 onPress={() => handlePurchase(item)}
                 disabled={needsPremium}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.name}, ${isEquipped ? 'equipped' : isOwned ? 'owned, tap to equip' : `${item.price} coins`}${needsPremium ? ', premium required' : ''}`}
+                accessibilityState={{ disabled: needsPremium, selected: isEquipped }}
               >
                 {/* Equipped badge */}
                 {isEquipped && (
@@ -192,7 +198,7 @@ export default function ShopScreen() {
 
         {/* Info text */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>How it works</Text>
+          <Text style={styles.infoTitle} accessibilityRole="header">How it works</Text>
           <Text style={styles.infoText}>
             Earn coins from challenges and achievements, then spend them here to customize Chester!
             Equipped items show on Chester's avatar throughout the app.

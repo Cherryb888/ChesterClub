@@ -46,8 +46,8 @@ export default function InsightsScreen() {
           <>
             {/* Daily Tip */}
             {dailyTip && (
-              <View style={styles.dailyTipCard}>
-                <Text style={styles.dailyTipHeader}>Today's Tip</Text>
+              <View style={styles.dailyTipCard} accessibilityLabel={`Today's tip: ${dailyTip.title}. ${dailyTip.message}`}>
+                <Text style={styles.dailyTipHeader} accessibilityRole="header">Today's Tip</Text>
                 <View style={styles.dailyTipContent}>
                   <Text style={styles.dailyTipIcon}>{dailyTip.icon}</Text>
                   <View style={styles.dailyTipText}>
@@ -59,7 +59,7 @@ export default function InsightsScreen() {
             )}
 
             {/* Weekly Insights */}
-            <Text style={styles.sectionTitle}>This Week's Analysis</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">This Week's Analysis</Text>
 
             {insights.length === 0 ? (
               <EmptyState
@@ -74,6 +74,7 @@ export default function InsightsScreen() {
                   <View
                     key={insight.id}
                     style={[styles.insightCard, { backgroundColor: colors.bg, borderLeftColor: colors.border }]}
+                    accessibilityLabel={`${insight.type === 'celebration' ? 'Win' : insight.type}: ${insight.title}. ${insight.message}`}
                   >
                     <View style={styles.insightHeader}>
                       <Text style={styles.insightIcon}>{insight.icon}</Text>

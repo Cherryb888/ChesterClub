@@ -71,7 +71,7 @@ export default function LogScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.header}>Today's Food Log</Text>
+        <Text style={styles.header} accessibilityRole="header">Today's Food Log</Text>
         <Text style={styles.date}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
 
         {/* Summary bar */}
@@ -91,7 +91,7 @@ export default function LogScreen() {
             <ChesterFaceIcon size={48} />
             <Text style={styles.emptyText}>No food logged yet today!</Text>
             <Text style={styles.emptySubtext}>Chester is waiting for you to scan your first meal</Text>
-            <TouchableOpacity style={styles.scanBtn} onPress={() => router.push('/(tabs)/scanner')}>
+            <TouchableOpacity style={styles.scanBtn} onPress={() => router.push('/(tabs)/scanner')} accessibilityLabel="Scan food" accessibilityRole="button">
               <Ionicons name="camera" size={20} color="#fff" />
               <Text style={styles.scanBtnText}>Scan Food</Text>
             </TouchableOpacity>
@@ -112,7 +112,7 @@ export default function LogScreen() {
               {items.map(item => {
                 const isFav = favoriteNames.has(item.name.toLowerCase());
                 return (
-                  <TouchableOpacity key={item.id} style={styles.foodItem} onLongPress={() => deleteItem(item)}>
+                  <TouchableOpacity key={item.id} style={styles.foodItem} onLongPress={() => deleteItem(item)} accessibilityLabel={`${item.name}, ${item.calories} calories, ${item.servingSize}`} accessibilityHint="Long press to remove" accessibilityRole="button">
                     <View style={styles.foodInfo}>
                       <Text style={styles.foodName}>{item.name}</Text>
                       <Text style={styles.foodServing}>{item.servingSize}</Text>
@@ -125,6 +125,8 @@ export default function LogScreen() {
                       style={styles.favBtn}
                       onPress={() => toggleFavorite(item)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel={isFav ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`}
+                      accessibilityRole="button"
                     >
                       <Ionicons
                         name={isFav ? 'heart' : 'heart-outline'}
@@ -141,7 +143,7 @@ export default function LogScreen() {
       </ScrollView>
 
       {/* FAB to add food */}
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(tabs)/scanner')}>
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(tabs)/scanner')} accessibilityLabel="Add food" accessibilityRole="button">
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
@@ -150,7 +152,7 @@ export default function LogScreen() {
 
 function SummaryStat({ label, value, goal, color, suffix }: { label: string; value: number; goal: number; color: string; suffix?: string }) {
   return (
-    <View style={styles.summaryItem}>
+    <View style={styles.summaryItem} accessibilityLabel={`${label}: ${Math.round(value)}${suffix || ''} of ${goal}${suffix || ''}`}>
       <Text style={[styles.summaryValue, { color }]}>{Math.round(value)}{suffix}</Text>
       <Text style={styles.summaryLabel}>{label}</Text>
       <Text style={styles.summaryGoal}>/{goal}{suffix}</Text>

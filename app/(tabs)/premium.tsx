@@ -106,16 +106,16 @@ export default function PremiumScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Back button */}
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
 
         {/* Hero */}
         <View style={styles.hero}>
-          <View style={styles.crownCircle}>
+          <View style={styles.crownCircle} accessibilityLabel="Premium crown">
             <Text style={styles.crownEmoji}>👑</Text>
           </View>
-          <Text style={styles.heroTitle}>ChesterClub Premium</Text>
+          <Text style={styles.heroTitle} accessibilityRole="header">ChesterClub Premium</Text>
           <Text style={styles.heroSubtitle}>
             {isPremium
               ? 'You have full access to all premium features!'
@@ -137,6 +137,9 @@ export default function PremiumScreen() {
             <TouchableOpacity
               style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]}
               onPress={() => setSelectedPlan('monthly')}
+              accessibilityRole="button"
+              accessibilityLabel="Monthly plan, $4.99 per month"
+              accessibilityState={{ selected: selectedPlan === 'monthly' }}
             >
               <Text style={styles.planName}>Monthly</Text>
               <Text style={styles.planPrice}>$4.99</Text>
@@ -146,6 +149,9 @@ export default function PremiumScreen() {
             <TouchableOpacity
               style={[styles.planCard, styles.planCardBest, selectedPlan === 'yearly' && styles.planCardSelected]}
               onPress={() => setSelectedPlan('yearly')}
+              accessibilityRole="button"
+              accessibilityLabel="Yearly plan, $29.99 per year, best value, save 50%"
+              accessibilityState={{ selected: selectedPlan === 'yearly' }}
             >
               <View style={styles.bestBadge}>
                 <Text style={styles.bestBadgeText}>Best Value</Text>
@@ -160,11 +166,11 @@ export default function PremiumScreen() {
 
         {/* Features */}
         <View style={styles.featuresSection}>
-          <Text style={styles.featuresTitle}>
+          <Text style={styles.featuresTitle} accessibilityRole="header">
             {isPremium ? 'Your Premium Features' : 'What You Get'}
           </Text>
           {FEATURES.map((feature, i) => (
-            <View key={i} style={styles.featureRow}>
+            <View key={i} style={styles.featureRow} accessibilityLabel={`${feature.title}: ${feature.description}${feature.free ? '' : ', premium only'}`}>
               <View style={[styles.featureIcon, !feature.free && styles.featureIconPremium]}>
                 <Ionicons name={feature.icon as any} size={20} color={feature.free ? Colors.secondary : '#FFD700'} />
               </View>
@@ -185,7 +191,7 @@ export default function PremiumScreen() {
 
         {/* CTA */}
         {!isPremium && (
-          <TouchableOpacity style={styles.subscribeBtn} onPress={handleSubscribe}>
+          <TouchableOpacity style={styles.subscribeBtn} onPress={handleSubscribe} accessibilityRole="button" accessibilityLabel={`Start Premium, ${selectedPlan === 'monthly' ? '$4.99 per month' : '$29.99 per year'}`}>
             <Text style={styles.subscribeBtnText}>
               Start Premium - {selectedPlan === 'monthly' ? '$4.99/mo' : '$29.99/yr'}
             </Text>
@@ -193,7 +199,7 @@ export default function PremiumScreen() {
         )}
 
         {/* Restore */}
-        <TouchableOpacity style={styles.restoreBtn} onPress={handleRestore}>
+        <TouchableOpacity style={styles.restoreBtn} onPress={handleRestore} accessibilityRole="button" accessibilityLabel="Restore Purchases">
           <Text style={styles.restoreBtnText}>Restore Purchases</Text>
         </TouchableOpacity>
 

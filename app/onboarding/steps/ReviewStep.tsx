@@ -21,7 +21,7 @@ interface Props {
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.reviewRow}>
+    <View style={styles.reviewRow} accessibilityLabel={`${label}: ${value}`}>
       <Text style={styles.reviewRowLabel}>{label}</Text>
       <Text style={styles.reviewRowValue}>{value}</Text>
     </View>
@@ -33,16 +33,16 @@ export default function ReviewStep({ goalCalories, tdee, fitnessGoal, macros, wa
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepEmoji}>✅</Text>
-      <Text style={styles.title}>Your Plan</Text>
+      <Text style={styles.title} accessibilityRole="header">Your Plan</Text>
       <Text style={styles.subtitle}>Chester calculated your personalised targets</Text>
 
-      <View style={styles.reviewCard}>
+      <View style={styles.reviewCard} accessibilityLabel={`Daily calories: ${goalCalories}. TDEE: ${tdee} ${goalSuffix}`}>
         <Text style={styles.reviewLabel}>Daily Calories</Text>
         <Text style={styles.reviewValue}>{goalCalories} cal</Text>
         <Text style={styles.reviewHint}>TDEE: {tdee} cal {goalSuffix}</Text>
       </View>
 
-      <View style={styles.reviewMacros}>
+      <View style={styles.reviewMacros} accessibilityLabel={`Macros: ${macros.protein}g protein, ${macros.carbs}g carbs, ${macros.fat}g fat`}>
         <View style={[styles.reviewMacroBox, { borderColor: Colors.protein }]}>
           <Text style={[styles.reviewMacroValue, { color: Colors.protein }]}>{macros.protein}g</Text>
           <Text style={styles.reviewMacroLabel}>Protein</Text>
@@ -57,7 +57,7 @@ export default function ReviewStep({ goalCalories, tdee, fitnessGoal, macros, wa
         </View>
       </View>
 
-      <View style={styles.reviewCard}>
+      <View style={styles.reviewCard} accessibilityLabel={`Daily water: ${waterGoal} glasses`}>
         <Text style={styles.reviewLabel}>Daily Water</Text>
         <Text style={styles.reviewValue}>{waterGoal} glasses 💧</Text>
       </View>

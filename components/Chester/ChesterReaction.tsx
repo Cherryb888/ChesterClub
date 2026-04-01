@@ -59,14 +59,18 @@ export default function ChesterReaction({ message, score, visible, autoDismissMs
   const accentColor = score ? SCORE_COLORS[score] : Colors.primary;
 
   return (
-    <Animated.View style={[
-      styles.bubble,
-      {
-        opacity: fadeAnim,
-        transform: [{ translateX: slideAnim }, { scale: scaleAnim }],
-        borderLeftColor: accentColor,
-      },
-    ]}>
+    <Animated.View
+      style={[
+        styles.bubble,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateX: slideAnim }, { scale: scaleAnim }],
+          borderLeftColor: accentColor,
+        },
+      ]}
+      accessibilityLabel={`Chester says: ${message}`}
+      accessibilityRole="alert"
+    >
       {score && (
         <View style={[styles.scoreBadge, { backgroundColor: accentColor + '15' }]}>
           <Text style={styles.scoreEmoji}>{SCORE_EMOJI[score]}</Text>

@@ -53,7 +53,7 @@ export default function WeeklyRecap({ stats, visible, onClose }: Props) {
         <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.headerEmoji}>📊</Text>
-            <Text style={styles.headerTitle}>Weekly Recap</Text>
+            <Text style={styles.headerTitle} accessibilityRole="header">Weekly Recap</Text>
           </View>
 
           {/* Grade */}
@@ -78,7 +78,7 @@ export default function WeeklyRecap({ stats, visible, onClose }: Props) {
             <Text style={styles.commentText}>{comment}</Text>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={onClose}>
+          <TouchableOpacity style={styles.button} onPress={onClose} accessibilityLabel="Dismiss weekly recap" accessibilityRole="button">
             <Text style={styles.buttonText}>Got it!</Text>
           </TouchableOpacity>
         </View>
@@ -89,7 +89,7 @@ export default function WeeklyRecap({ stats, visible, onClose }: Props) {
 
 function StatBox({ label, value, icon }: { label: string; value: string; icon: string }) {
   return (
-    <View style={styles.statBox}>
+    <View style={styles.statBox} accessibilityLabel={`${label}: ${value}`}>
       {icon ? <Text style={styles.statIcon}>{icon}</Text> : null}
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>

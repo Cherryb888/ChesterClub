@@ -80,12 +80,12 @@ export default function DailyDigScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* Back button */}
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
         <Ionicons name="arrow-back" size={24} color={Colors.text} />
       </TouchableOpacity>
 
       <View style={styles.container}>
-        <Text style={styles.title}>Chester's Daily Dig</Text>
+        <Text style={styles.title} accessibilityRole="header">Chester's Daily Dig</Text>
         <Text style={styles.subtitle}>
           {phase === 'idle' && canDig ? 'Tap the ground to let Chester dig!' :
            phase === 'digging' ? 'Chester is digging...' :
@@ -103,7 +103,7 @@ export default function DailyDigScreen() {
 
         {/* Dig button */}
         {phase === 'idle' && canDig && (
-          <TouchableOpacity style={styles.digButton} onPress={handleDig} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.digButton} onPress={handleDig} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Let Chester dig" accessibilityHint="Chester will dig for a random reward">
             <Text style={styles.digButtonIcon}>🐾</Text>
             <Text style={styles.digButtonText}>Let Chester Dig!</Text>
           </TouchableOpacity>
@@ -118,7 +118,9 @@ export default function DailyDigScreen() {
               transform: [{ scale: phase === 'already_dug' ? 1 : rewardScale }],
               borderColor: rarityInfo?.color || Colors.border,
             },
-          ]}>
+          ]}
+            accessibilityLabel={`Reward: ${reward.title}, ${rarityInfo?.label || ''} rarity. ${reward.description}`}
+          >
             {/* Rarity glow for rare+ */}
             {(reward.rarity === 'rare' || reward.rarity === 'super_rare') && phase === 'reveal' && (
               <Animated.View style={[styles.rewardGlow, {
@@ -156,7 +158,7 @@ export default function DailyDigScreen() {
 
         {/* Already dug message */}
         {phase === 'already_dug' && !reward && (
-          <View style={styles.alreadyDugCard}>
+          <View style={styles.alreadyDugCard} accessibilityLabel="Chester's tired from digging today. Come back tomorrow for another dig.">
             <Text style={styles.alreadyDugIcon}>😴</Text>
             <Text style={styles.alreadyDugText}>Chester's tired from digging today!</Text>
             <Text style={styles.alreadyDugSub}>Come back tomorrow for another dig.</Text>
@@ -164,7 +166,7 @@ export default function DailyDigScreen() {
         )}
 
         {/* Stats */}
-        <View style={styles.statsRow}>
+        <View style={styles.statsRow} accessibilityLabel={`Total digs: ${totalDigs}`}>
           <Text style={styles.statsText}>Total digs: {totalDigs}</Text>
         </View>
       </View>

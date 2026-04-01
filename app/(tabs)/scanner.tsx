@@ -36,7 +36,7 @@ export default function ScannerScreen() {
           <Ionicons name="camera-outline" size={64} color={Colors.primary} />
           <Text style={styles.permissionTitle}>Camera Access Needed</Text>
           <Text style={styles.permissionText}>Chester needs your camera to scan food and track your nutrition!</Text>
-          <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+          <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission} accessibilityLabel="Allow camera access" accessibilityRole="button">
             <Text style={styles.permissionBtnText}>Allow Camera</Text>
           </TouchableOpacity>
         </View>
@@ -64,6 +64,9 @@ export default function ScannerScreen() {
                 <TouchableOpacity
                   style={[styles.scanTab, scanType === 'meal' && styles.scanTabActive]}
                   onPress={() => switchScanType('meal')}
+                  accessibilityLabel="Scan meal"
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: scanType === 'meal' }}
                 >
                   <Ionicons name="restaurant" size={18} color={scanType === 'meal' ? '#fff' : 'rgba(255,255,255,0.6)'} />
                   <Text style={[styles.scanTabText, scanType === 'meal' && styles.scanTabTextActive]}>Meal</Text>
@@ -71,6 +74,9 @@ export default function ScannerScreen() {
                 <TouchableOpacity
                   style={[styles.scanTab, scanType === 'label' && styles.scanTabActive]}
                   onPress={() => switchScanType('label')}
+                  accessibilityLabel="Scan barcode label"
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: scanType === 'label' }}
                 >
                   <Ionicons name="barcode" size={18} color={scanType === 'label' ? '#fff' : 'rgba(255,255,255,0.6)'} />
                   <Text style={[styles.scanTabText, scanType === 'label' && styles.scanTabTextActive]}>Label</Text>
@@ -78,7 +84,7 @@ export default function ScannerScreen() {
               </View>
 
               {scanType === 'meal' && (
-                <TouchableOpacity onPress={() => setMode('text')} style={styles.textModeBtn}>
+                <TouchableOpacity onPress={() => setMode('text')} style={styles.textModeBtn} accessibilityLabel="Switch to text input mode" accessibilityRole="button">
                   <Ionicons name="text" size={18} color="#fff" />
                   <Text style={styles.textModeBtnText}>Type</Text>
                 </TouchableOpacity>
@@ -114,10 +120,10 @@ export default function ScannerScreen() {
             <View style={styles.cameraControls}>
               {scanType === 'meal' ? (
                 <>
-                  <TouchableOpacity style={styles.galleryBtn} onPress={pickImage}>
+                  <TouchableOpacity style={styles.galleryBtn} onPress={pickImage} accessibilityLabel="Pick image from gallery" accessibilityRole="button">
                     <Ionicons name="images" size={28} color="#fff" />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.captureBtn} onPress={takePhoto}>
+                  <TouchableOpacity style={styles.captureBtn} onPress={takePhoto} accessibilityLabel="Take photo" accessibilityRole="button">
                     <View style={styles.captureBtnInner} />
                   </TouchableOpacity>
                   <View style={{ width: 50 }} />
@@ -141,10 +147,10 @@ export default function ScannerScreen() {
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView style={styles.textContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.textHeader}>
-            <TouchableOpacity onPress={resetScanner}>
+            <TouchableOpacity onPress={resetScanner} accessibilityLabel="Go back" accessibilityRole="button">
               <Ionicons name="arrow-back" size={24} color={Colors.text} />
             </TouchableOpacity>
-            <Text style={styles.textTitle}>Describe Your Food</Text>
+            <Text style={styles.textTitle} accessibilityRole="header">Describe Your Food</Text>
             <View style={{ width: 24 }} />
           </View>
           <Text style={styles.textHint}>Tell Chester what you're eating! Be as detailed as you can.</Text>
@@ -156,13 +162,18 @@ export default function ScannerScreen() {
             value={textInput}
             onChangeText={setTextInput}
             autoFocus
+            accessibilityLabel="Describe your food"
+            accessibilityHint="Enter a description of what you ate"
           />
           <TouchableOpacity
             style={[styles.analyzeBtn, !textInput.trim() && styles.analyzeBtnDisabled]}
             onPress={analyzeText}
             disabled={!textInput.trim() || loading}
+            accessibilityLabel={loading ? 'Analyzing food' : 'Analyze food'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !textInput.trim() || loading }}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.analyzeBtnText}>Analyze Food</Text>}
+            {loading ? <ActivityIndicator color="#fff" accessibilityLabel="Analyzing" /> : <Text style={styles.analyzeBtnText}>Analyze Food</Text>}
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -174,12 +185,12 @@ export default function ScannerScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.previewContainer}>
-          {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
+          {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} accessibilityLabel="Photo of your food" />}
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingChester}>
-              <Image source={require('../../assets/chester/chester-happy.png')} style={styles.loadingChesterImage} resizeMode="cover" />
+              <Image source={require('../../assets/chester/chester-happy.png')} style={styles.loadingChesterImage} resizeMode="cover" accessibilityLabel="Chester analyzing" />
             </View>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Analyzing food" />
             <Text style={styles.loadingText}>Chester is sniffing your food...</Text>
           </View>
         </View>
@@ -192,16 +203,16 @@ export default function ScannerScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.resultScroll}>
         <View style={styles.resultHeader}>
-          <TouchableOpacity onPress={resetScanner}>
+          <TouchableOpacity onPress={resetScanner} accessibilityLabel="Go back" accessibilityRole="button">
             <Ionicons name="arrow-back" size={24} color={Colors.text} />
           </TouchableOpacity>
-          <Text style={styles.resultTitle}>
+          <Text style={styles.resultTitle} accessibilityRole="header">
             {scanType === 'label' ? 'Product Found' : 'Scan Results'}
           </Text>
           <View style={{ width: 24 }} />
         </View>
 
-        {imageUri && <Image source={{ uri: imageUri }} style={styles.resultImage} />}
+        {imageUri && <Image source={{ uri: imageUri }} style={styles.resultImage} accessibilityLabel="Scanned food photo" />}
 
         {result && <ChesterReaction message={result.chesterReaction} score={result.overallScore} visible={true} />}
 
@@ -231,11 +242,11 @@ export default function ScannerScreen() {
         ))}
 
         <View style={styles.resultActions}>
-          <TouchableOpacity style={styles.logBtn} onPress={logFood}>
+          <TouchableOpacity style={styles.logBtn} onPress={logFood} accessibilityLabel="Log this meal" accessibilityRole="button">
             <Ionicons name="checkmark-circle" size={24} color="#fff" />
             <Text style={styles.logBtnText}>Log This Meal</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.retryBtn} onPress={resetScanner}>
+          <TouchableOpacity style={styles.retryBtn} onPress={resetScanner} accessibilityLabel="Scan again" accessibilityRole="button">
             <Ionicons name="refresh" size={20} color={Colors.primary} />
             <Text style={styles.retryBtnText}>Scan Again</Text>
           </TouchableOpacity>

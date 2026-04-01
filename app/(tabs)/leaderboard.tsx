@@ -99,6 +99,9 @@ export default function LeaderboardScreen() {
               key={cat}
               style={[styles.tab, category === cat && styles.tabActive]}
               onPress={() => setCategory(cat)}
+              accessibilityLabel={`${CATEGORY_CONFIG[cat].title} leaderboard`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: category === cat }}
             >
               <Text style={styles.tabEmoji}>{CATEGORY_CONFIG[cat].icon}</Text>
               <Text style={[styles.tabText, category === cat && styles.tabTextActive]}>
@@ -130,7 +133,7 @@ export default function LeaderboardScreen() {
           <>
             {/* Podium for top 3 */}
             {entries.length >= 3 && (
-              <View style={styles.podium}>
+              <View style={styles.podium} accessibilityLabel="Top 3 podium">
                 <PodiumSlot entry={entries[1]} rank={2} />
                 <PodiumSlot entry={entries[0]} rank={1} />
                 <PodiumSlot entry={entries[2]} rank={3} />
@@ -142,6 +145,7 @@ export default function LeaderboardScreen() {
               <View
                 key={entry.uid}
                 style={[styles.rankRow, entry.isMe && styles.rankRowMe]}
+                accessibilityLabel={`Rank ${index + 1}, ${entry.name}${entry.isMe ? ' (You)' : ''}, ${entry.value}${config.suffix}`}
               >
                 <Text style={[styles.rankNumber, index < 3 && styles.rankNumberTop]}>
                   {index + 1}

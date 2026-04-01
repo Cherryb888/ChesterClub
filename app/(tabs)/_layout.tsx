@@ -33,6 +33,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
+          tabBarAccessibilityLabel: 'Home tab',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
@@ -42,6 +43,7 @@ export default function TabLayout() {
         name="scanner"
         options={{
           title: 'Scan',
+          tabBarAccessibilityLabel: 'Scan food tab',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="camera" size={size + 4} color={color} />
           ),
@@ -55,6 +57,7 @@ export default function TabLayout() {
         name="log"
         options={{
           title: 'Log',
+          tabBarAccessibilityLabel: 'Food log tab',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list" size={size} color={color} />
           ),
@@ -64,6 +67,7 @@ export default function TabLayout() {
         name="meal-plan"
         options={{
           title: 'Meals',
+          tabBarAccessibilityLabel: 'Meal plan tab',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="restaurant" size={size} color={color} />
           ),
@@ -73,6 +77,7 @@ export default function TabLayout() {
         name="calendar"
         options={{
           title: 'Calendar',
+          tabBarAccessibilityLabel: 'Calendar tab',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" size={size} color={color} />
           ),

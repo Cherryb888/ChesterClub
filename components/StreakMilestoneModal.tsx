@@ -95,7 +95,7 @@ export default function StreakMilestoneModal({ milestone, visible, onClose }: Pr
           ))
         )}
 
-        <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
+        <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]} accessibilityRole="alert" accessibilityLabel={`Streak milestone: ${milestone.day} day streak! ${milestone.chesterMessage}`}>
           {/* Top accent */}
           <View style={[styles.topAccent, isGolden && styles.topAccentGolden]} />
 
@@ -135,6 +135,8 @@ export default function StreakMilestoneModal({ milestone, visible, onClose }: Pr
           <TouchableOpacity
             style={[styles.button, isGolden && styles.buttonGolden]}
             onPress={onClose}
+            accessibilityLabel="Dismiss streak milestone"
+            accessibilityRole="button"
           >
             <Text style={styles.buttonText}>Amazing!</Text>
           </TouchableOpacity>
