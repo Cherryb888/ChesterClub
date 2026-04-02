@@ -6,8 +6,18 @@ import { getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
 import { getEquippedItems } from '../../services/shopService';
 import { getShopItemById, BACKGROUND_COLORS } from '../../constants/shopItems';
 
-// Single image for now — replace with stage-specific images later
-const CHESTER_IMAGE = require('../../assets/chester/chester-happy.png');
+// Stage-specific images.
+// puppy / young  →  chester-happy.png  (small, playful cartoon)
+// adult+         →  chester-solo.png   (detailed, mature portrait)
+// Add dedicated per-stage images here when available; the map will
+// automatically pick them up without any other code changes.
+const STAGE_IMAGES: Record<ChesterLifeStage, ReturnType<typeof require>> = {
+  puppy:    require('../../assets/chester/chester-happy.png'),
+  young:    require('../../assets/chester/chester-happy.png'),
+  adult:    require('../../assets/chester/chester-solo.png'),
+  champion: require('../../assets/chester/chester-solo.png'),
+  golden:   require('../../assets/chester/chester-solo.png'),
+};
 
 interface Props {
   chester: ChesterState;
@@ -39,6 +49,7 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
 
   const stage = getChesterLifeStage(chester.level);
   const stageInfo = LIFE_STAGE_INFO[stage];
+  const chesterImage = STAGE_IMAGES[stage];
 
   // Equipped cosmetics
   const [equipped, setEquipped] = useState<Record<string, string>>({});
@@ -117,7 +128,7 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
           backgroundColor: containerBg,
         }]}>
           <Image
-            source={CHESTER_IMAGE}
+            source={chesterImage}
             style={[styles.chesterImage, {
               width: imageSize,
               height: imageSize,

@@ -23,10 +23,10 @@ AI-powered food scanner and macro tracker with Chester the Dog as your virtual c
 | Firebase Auth (email, Google, Apple) | ✅ Working |
 | Cloud sync (Firestore) with offline queue | ✅ Working |
 | Local notifications (meal, water, streak) | ✅ Working |
-| Friends (friend codes, list, leaderboard, feed) | ✅ Working — posts to Firestore, no real-time subscriptions |
+| Friends (friend codes, list, leaderboard, feed) | ✅ Working — feed uses real-time `onSnapshot` listeners |
 | Cloud Functions proxy (Gemini key server-side) | ✅ Built — needs deploying |
 | Premium tier gating | ⚠️ Feature flags work, no in-app purchase SDK |
-| Chester stage-specific images | ❌ Not done — only `chester-happy.png` used |
+| Chester stage-specific images | ✅ Working — puppy/young use `chester-happy.png`; adult/champion/golden use `chester-solo.png` |
 | Social interactions (likes/comments on feed) | ❌ Not planned |
 
 ## Tech Stack
@@ -193,13 +193,13 @@ eas build --platform ios --profile production
 ### Must-Do
 - [ ] Deploy Cloud Functions and set `EXPO_PUBLIC_FUNCTIONS_URL` (removes Gemini key from client)
 - [x] Write Firestore security rules — `firestore.rules` created, deploy with `firebase deploy --only firestore:rules`
-- [ ] Add Chester stage-specific image assets — `chester-happy.png` is the only asset; avatar shows life-stage levels but renders the same image regardless
+- [x] Add Chester stage-specific image assets — puppy/young use `chester-happy.png`; adult/champion/golden use `chester-solo.png`. `ChesterAvatar` uses a `STAGE_IMAGES` map so swapping in dedicated per-stage images later requires only adding the files and updating the map.
 - [ ] In-app purchases for Premium tier (StoreKit on iOS, Play Billing on Android) — gating logic is in place, just needs payment SDK wired up
 - [x] Privacy Policy screen — `app/(tabs)/privacy-policy.tsx`, linked from Settings > About. Fill in `CONTROLLER_NAME`, `CONTROLLER_EMAIL`, `CONTROLLER_COUNTRY` at the top of the file before publishing.
 
 ### Should-Do
 - [ ] Shop item visual previews (currently emoji icons — ideally small images per cosmetic)
-- [ ] Real-time friend feed (currently polls Firestore; could use `onSnapshot` listener)
+- [x] Real-time friend feed — uses `onSnapshot` per-user listeners; feed updates live without manual refresh
 - [ ] Push notification setup via EAS / FCM (notification scheduling is implemented locally; cloud delivery not configured)
 - [ ] TypeScript clean-up: `npx tsc --noEmit`
 
