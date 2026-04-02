@@ -21,7 +21,7 @@ const FEATURES = [
     icon: 'restaurant',
     title: 'AI Meal Plans',
     description: 'Unlimited personalized AI-generated meal plans',
-    free: true,
+    free: false,
   },
   {
     icon: 'camera',
