@@ -4,7 +4,7 @@ import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { analyzeFoodImage, analyzeTextFood } from '../services/gemini';
 import { lookupBarcode } from '../services/openfoodfacts';
-import { addFoodToLog, feedChester, addRecentFood, getTodayKey } from '../services/storage';
+import { addFoodToLog, feedChester, addRecentFood, getTodayKey, getDailyLog, getProfile } from '../services/storage';
 import { FoodItem, GeminiFoodResult } from '../types';
 
 export type ScanMode = 'camera' | 'preview' | 'result' | 'text';
@@ -30,7 +30,8 @@ export function useScanner() {
   const analyzeImage = async (base64: string) => {
     setLoading(true);
     try {
-      const foodResult = await analyzeFoodImage(base64);
+      const [profile, todayLog] = await Promise.all([getProfile(), getDailyLog(getTodayKey())]);
+      const foodResult = await analyzeFoodImage(base64, todayLog, profile.goals);
       setResult(foodResult);
       setMode('result');
     } catch (error: any) {
@@ -88,7 +89,8 @@ export function useScanner() {
     if (!textInput.trim()) return;
     setLoading(true);
     try {
-      const foodResult = await analyzeTextFood(textInput);
+      const [profile, todayLog] = await Promise.all([getProfile(), getDailyLog(getTodayKey())]);
+      const foodResult = await analyzeTextFood(textInput, todayLog, profile.goals);
       setResult(foodResult);
       setMode('result');
     } catch (error: any) {
