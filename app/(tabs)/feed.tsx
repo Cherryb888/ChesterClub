@@ -1,13 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getCurrentUser } from '../../services/firebase';
-import { getFriendFeed, FeedItem, FeedItemType } from '../../services/feedService';
+import { subscribeFriendFeed, FeedItem, FeedItemType } from '../../services/feedService';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingScreen from '../../components/ui/LoadingScreen';
@@ -38,23 +37,46 @@ export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  const unsubRef = useRef<(() => void) | null>(null);
 
   const isSignedIn = getCurrentUser() !== null;
 
-  const loadFeed = useCallback(async () => {
-    if (!isSignedIn) { setLoading(false); return; }
-    const feed = await getFriendFeed();
-    setItems(feed);
-    setLoading(false);
+  useEffect(() => {
+    if (!isSignedIn) {
+      setLoading(false);
+      return;
+    }
+
+    // Attach real-time listener
+    const unsub = subscribeFriendFeed(feed => {
+      setItems(feed);
+      setLoading(false);
+      setRefreshing(false);
+    });
+    unsubRef.current = unsub;
+
+    return () => {
+      unsub();
+      unsubRef.current = null;
+    };
   }, [isSignedIn]);
 
-  useFocusEffect(useCallback(() => { loadFeed(); }, [loadFeed]));
-
-  const onRefresh = async () => {
+  // Pull-to-refresh re-mounts the listener to re-fetch the friends list
+  // (in case new friends were added since last open)
+  const onRefresh = useCallback(() => {
+    if (!isSignedIn) return;
     setRefreshing(true);
-    await loadFeed();
-    setRefreshing(false);
-  };
+    // Tear down old listeners
+    if (unsubRef.current) {
+      unsubRef.current();
+      unsubRef.current = null;
+    }
+    const unsub = subscribeFriendFeed(feed => {
+      setItems(feed);
+      setRefreshing(false);
+    });
+    unsubRef.current = unsub;
+  }, [isSignedIn]);
 
   return (
     <SafeAreaView style={styles.container}>
