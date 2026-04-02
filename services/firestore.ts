@@ -1,5 +1,5 @@
 import {
-  doc, setDoc, getDoc, collection,
+  doc, setDoc, getDoc, getDocs, deleteDoc, collection,
   serverTimestamp,
 } from 'firebase/firestore';
 import { getDb, getCurrentUser, isFirebaseConfigured } from './firebase';
@@ -260,6 +260,61 @@ export async function performFullSync(): Promise<{ success: boolean; error?: str
 
 export async function getLastSyncTime(): Promise<string | null> {
   return AsyncStorage.getItem('last_cloud_sync');
+}
+
+// ─── Account + Data Deletion ───
+//
+// Deletes all Firestore data for the current user, then wipes AsyncStorage.
+// Call this BEFORE deleteCurrentUser() from firebase.ts.
+
+export async function deleteAllUserData(): Promise<void> {
+  const db = getDb();
+  const user = getCurrentUser();
+  if (!db || !user) {
+    // Not signed in — just wipe local storage
+    await AsyncStorage.clear();
+    return;
+  }
+
+  const uid = user.uid;
+
+  // Delete all documents in a subcollection
+  async function wipeSubcollection(...segments: string[]) {
+    try {
+      const ref = collection(db!, 'users', uid, ...segments);
+      const snap = await getDocs(ref);
+      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+    } catch {
+      // Best-effort — may lack permission if already partially deleted
+    }
+  }
+
+  // Wipe all known subcollections in parallel
+  await Promise.all([
+    wipeSubcollection('foodLogs'),
+    wipeSubcollection('waterLogs'),
+    wipeSubcollection('feed'),
+    wipeSubcollection('friends'),
+    wipeSubcollection('pushTokens'),
+  ]);
+
+  // Delete known top-level documents under users/{uid}
+  const knownDocs = ['profile', 'challenges', 'settings'];
+  await Promise.all(
+    knownDocs.map(name =>
+      deleteDoc(doc(db!, 'users', uid, name)).catch(() => {})
+    )
+  );
+
+  // Delete public profile and friend code
+  await deleteDoc(doc(db!, 'publicProfiles', uid)).catch(() => {});
+  const friendCode = await AsyncStorage.getItem('my_friend_code');
+  if (friendCode) {
+    await deleteDoc(doc(db!, 'friendCodes', friendCode)).catch(() => {});
+  }
+
+  // Wipe all local storage last
+  await AsyncStorage.clear();
 }
 
 // ─── First Login Sync ───
