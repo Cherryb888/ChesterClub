@@ -7,6 +7,7 @@ import { onAuthChange, isFirebaseConfigured } from '../services/firebase';
 import { onUserSignIn, performFullSync } from '../services/firestore';
 import { startConnectivityListener, stopConnectivityListener } from '../services/syncQueue';
 import { initializeNotifications, rescheduleAll } from '../services/notifications';
+import { registerPushToken, unregisterPushToken } from '../services/pushTokenService';
 
 export default function RootLayout() {
   // Run data migrations on app start
@@ -38,6 +39,9 @@ export default function RootLayout() {
     const unsubscribe = onAuthChange(async (user) => {
       if (user) {
         await onUserSignIn();
+        registerPushToken().catch(console.error);
+      } else {
+        unregisterPushToken().catch(console.error);
       }
     });
 

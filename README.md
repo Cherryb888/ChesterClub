@@ -200,7 +200,7 @@ eas build --platform ios --profile production
 ### Should-Do
 - [ ] Shop item visual previews (currently emoji icons — ideally small images per cosmetic)
 - [x] Real-time friend feed — uses `onSnapshot` per-user listeners; feed updates live without manual refresh
-- [ ] Push notification setup via EAS / FCM (notification scheduling is implemented locally; cloud delivery not configured)
+- [x] Push notification token registration — `pushTokenService.ts` registers the Expo push token in `users/{uid}/pushTokens` on sign-in, cleans up on sign-out. New `sendPushNotification` Cloud Function delivers notifications via the Expo Push API. Friends are notified on streak milestones, achievements, level-ups, and life-stage evolutions. Requires deploying Cloud Functions and setting `EXPO_PUBLIC_FUNCTIONS_URL`.
 - [ ] TypeScript clean-up: `npx tsc --noEmit`
 
 ### Store Submission

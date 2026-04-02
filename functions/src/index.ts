@@ -259,6 +259,98 @@ Return ONLY valid JSON, no markdown, no code blocks.`;
 // Endpoint 3: Generate meal plan
 // ═══════════════════════════════════════════
 
+// ═══════════════════════════════════════════
+// Endpoint 4: Send push notification to a user
+// ═══════════════════════════════════════════
+//
+// Looks up the target user's Expo push tokens from Firestore and
+// delivers the notification via the Expo Push API.
+//
+// Body: { targetUid, title, body, data? }
+// Auth: caller must be signed in (their own UID is used as the sender).
+
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+
+export const sendPushNotification = functions.https.onRequest(async (req, res) => {
+  setCors(req, res);
+  if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+
+  try {
+    const senderUid = await verifyAuth(req);
+    checkRateLimit(senderUid);
+
+    const { targetUid, title, body, data } = req.body;
+
+    if (!targetUid || typeof targetUid !== 'string') {
+      res.status(400).json({ error: 'Missing targetUid' });
+      return;
+    }
+    if (!title || typeof title !== 'string') {
+      res.status(400).json({ error: 'Missing title' });
+      return;
+    }
+    if (!body || typeof body !== 'string') {
+      res.status(400).json({ error: 'Missing body' });
+      return;
+    }
+
+    // Sanitise notification content
+    const safeTitle = sanitizeString(title, 100);
+    const safeBody  = sanitizeString(body, 300);
+
+    // Fetch all push tokens registered for the target user
+    const tokensSnap = await admin
+      .firestore()
+      .collection('users')
+      .doc(targetUid)
+      .collection('pushTokens')
+      .get();
+
+    if (tokensSnap.empty) {
+      res.json({ sent: 0, message: 'No registered devices for target user' });
+      return;
+    }
+
+    const tokens: string[] = tokensSnap.docs
+      .map(d => d.data().token as string)
+      .filter(t => typeof t === 'string' && t.startsWith('ExponentPushToken['));
+
+    if (tokens.length === 0) {
+      res.json({ sent: 0, message: 'No valid Expo push tokens found' });
+      return;
+    }
+
+    // Build Expo push messages (batch up to 100 per request)
+    const messages = tokens.map(to => ({
+      to,
+      title: safeTitle,
+      body: safeBody,
+      sound: 'default',
+      data: data && typeof data === 'object' ? data : {},
+    }));
+
+    const pushResponse = await fetch(EXPO_PUSH_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
+
+    if (!pushResponse.ok) {
+      const errorText = await pushResponse.text();
+      throw new functions.https.HttpsError('internal', `Expo push error: ${pushResponse.status} - ${errorText}`);
+    }
+
+    res.json({ sent: tokens.length });
+  } catch (err: any) {
+    const status = err.httpErrorCode?.status || 500;
+    res.status(status).json({ error: err.message || 'Internal server error' });
+  }
+});
+
 export const generateMealPlan = functions.https.onRequest(async (req, res) => {
   setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
