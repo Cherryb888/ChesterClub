@@ -41,7 +41,13 @@
         {
           "photosPermission": "ChesterClub needs access to your photos to analyze food images."
         }
-      ]
-    ]
+      ],
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
   }
 }

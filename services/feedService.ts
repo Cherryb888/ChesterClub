@@ -5,6 +5,7 @@ import {
 import { getDb, getCurrentUser, isFirebaseConfigured } from './firebase';
 import { getProfile } from './storage';
 import { getFriendsList } from './friendsService';
+import { sendPushToUser } from './pushTokenService';
 
 export type FeedItemType = 'meal' | 'streak_milestone' | 'achievement' | 'level_up' | 'life_stage';
 
@@ -58,30 +59,24 @@ export async function shareMeal(foodName: string, calories: number, score: strin
 }
 
 export async function shareStreakMilestone(days: number): Promise<void> {
-  await postToFeed({
-    type: 'streak_milestone',
-    title: `${days}-Day Streak!`,
-    subtitle: `On fire! ${days} days of consistent tracking.`,
-    icon: '🔥',
-  });
+  const title = `${days}-Day Streak!`;
+  const subtitle = `On fire! ${days} days of consistent tracking.`;
+  await postToFeed({ type: 'streak_milestone', title, subtitle, icon: '🔥' });
+  await _notifyFriends(title, subtitle);
 }
 
 export async function shareAchievement(title: string, icon: string): Promise<void> {
-  await postToFeed({
-    type: 'achievement',
-    title: `Unlocked: ${title}`,
-    subtitle: 'New achievement earned!',
-    icon,
-  });
+  const postTitle = `Unlocked: ${title}`;
+  const subtitle = 'New achievement earned!';
+  await postToFeed({ type: 'achievement', title: postTitle, subtitle, icon });
+  await _notifyFriends(postTitle, subtitle);
 }
 
 export async function shareLevelUp(level: number): Promise<void> {
-  await postToFeed({
-    type: 'level_up',
-    title: `Chester reached Level ${level}!`,
-    subtitle: 'Growing stronger every day.',
-    icon: '⬆️',
-  });
+  const title = `Chester reached Level ${level}!`;
+  const subtitle = 'Growing stronger every day.';
+  await postToFeed({ type: 'level_up', title, subtitle, icon: '⬆️' });
+  await _notifyFriends(title, subtitle);
 }
 
 export async function shareLifeStage(stage: string): Promise<void> {
@@ -89,12 +84,24 @@ export async function shareLifeStage(stage: string): Promise<void> {
     puppy: 'Puppy', young: 'Young Dog', adult: 'Adult Dog',
     champion: 'Champion', golden: 'Golden Chester',
   };
-  await postToFeed({
-    type: 'life_stage',
-    title: `Chester evolved to ${stageNames[stage] || stage}!`,
-    subtitle: 'A major milestone reached!',
-    icon: '🎉',
-  });
+  const title = `Chester evolved to ${stageNames[stage] || stage}!`;
+  const subtitle = 'A major milestone reached!';
+  await postToFeed({ type: 'life_stage', title, subtitle, icon: '🎉' });
+  await _notifyFriends(title, subtitle);
+}
+
+// Sends a push notification to all friends (fire-and-forget)
+async function _notifyFriends(title: string, body: string): Promise<void> {
+  try {
+    const profile = await getProfile();
+    const friends = await getFriendsList();
+    const senderName = profile.displayName || 'Your friend';
+    for (const f of friends) {
+      sendPushToUser(f.uid, `${senderName} 🐾`, `${title} — ${body}`).catch(() => {});
+    }
+  } catch {
+    // Never block the main action
+  }
 }
 
 // ─── Real-time Friend Feed (onSnapshot) ───

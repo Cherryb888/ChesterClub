@@ -14,8 +14,11 @@ import {
   AppSettings,
 } from '../../services/storage';
 import { UserProfile } from '../../types';
-import { isFirebaseConfigured, getCurrentUser } from '../../services/firebase';
-import { performFullSync, getLastSyncTime } from '../../services/firestore';
+import {
+  isFirebaseConfigured, getCurrentUser,
+  reauthenticateWithPassword, deleteCurrentUser, signOut,
+} from '../../services/firebase';
+import { performFullSync, getLastSyncTime, deleteAllUserData } from '../../services/firestore';
 import { rescheduleAll } from '../../services/notifications';
 
 export default function SettingsScreen() {
@@ -71,14 +74,10 @@ export default function SettingsScreen() {
   const handleClearData = () => {
     Alert.alert(
       'Clear All Data',
-      'This will permanently delete all your food logs, weight history, Chester progress, and settings. This cannot be undone.',
+      'This will permanently delete all your food logs, weight history, Chester progress, and settings — including cloud data. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Export First', onPress: async () => {
-            await handleExportData();
-          }
-        },
+        { text: 'Export First', onPress: handleExportData },
         {
           text: 'Delete Everything', style: 'destructive', onPress: () => {
             Alert.alert(
@@ -88,13 +87,76 @@ export default function SettingsScreen() {
                 { text: 'Cancel', style: 'cancel' },
                 {
                   text: 'Yes, Delete All', style: 'destructive', onPress: async () => {
-                    await AsyncStorage.clear();
+                    await deleteAllUserData();
                     Alert.alert('Data Cleared', 'All data has been deleted. The app will reset.');
-                  }
+                  },
                 },
               ]
             );
-          }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    const user = getCurrentUser();
+    if (!user) {
+      Alert.alert('Not signed in', 'Sign in to delete your account.');
+      return;
+    }
+
+    // Determine if user signed in with email/password
+    const isEmailUser = user.providerData.some(p => p.providerId === 'password');
+
+    const performDeletion = async (password?: string) => {
+      try {
+        if (isEmailUser && password) {
+          await reauthenticateWithPassword(password);
+        }
+        await deleteAllUserData();
+        await deleteCurrentUser();
+        Alert.alert('Account Deleted', 'Your account and all data have been permanently deleted.');
+      } catch (err: any) {
+        if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+          Alert.alert('Incorrect Password', 'The password you entered is wrong. Please try again.');
+        } else if (err.code === 'auth/requires-recent-login') {
+          Alert.alert(
+            'Re-authentication Required',
+            'For security, please sign out and sign back in, then try deleting your account again.'
+          );
+        } else {
+          Alert.alert('Error', err.message || 'Could not delete account. Please try again.');
+        }
+      }
+    };
+
+    Alert.alert(
+      'Delete Account',
+      'This permanently deletes your account, all food logs, Chester progress, and cloud data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete My Account', style: 'destructive', onPress: () => {
+            if (isEmailUser) {
+              // Prompt for password re-authentication
+              Alert.prompt(
+                'Confirm Password',
+                'Enter your password to confirm account deletion.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete', style: 'destructive',
+                    onPress: (password) => performDeletion(password ?? ''),
+                  },
+                ],
+                'secure-text'
+              );
+            } else {
+              // Google/Apple — attempt deletion directly
+              performDeletion();
+            }
+          },
         },
       ]
     );
@@ -279,13 +341,26 @@ export default function SettingsScreen() {
               <SettingRow
                 icon="trash-outline"
                 label="Clear All Data"
-                subtitle="Permanently delete everything"
-                last
+                subtitle="Permanently delete all local and cloud data"
                 destructive
               >
                 <Ionicons name="chevron-forward" size={20} color={Colors.error} />
               </SettingRow>
             </TouchableOpacity>
+
+            {getCurrentUser() && (
+              <TouchableOpacity onPress={handleDeleteAccount} accessibilityLabel="Delete account" accessibilityRole="button">
+                <SettingRow
+                  icon="person-remove-outline"
+                  label="Delete Account"
+                  subtitle="Permanently delete your account and all data"
+                  last
+                  destructive
+                >
+                  <Ionicons name="chevron-forward" size={20} color={Colors.error} />
+                </SettingRow>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -302,7 +377,17 @@ export default function SettingsScreen() {
               accessibilityLabel="Privacy Policy"
               accessibilityRole="button"
             >
-              <SettingRow icon="shield-checkmark-outline" label="Privacy Policy" last>
+              <SettingRow icon="shield-checkmark-outline" label="Privacy Policy">
+                <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
+              </SettingRow>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/terms-of-service')}
+              accessibilityLabel="Terms of Service"
+              accessibilityRole="button"
+            >
+              <SettingRow icon="document-text-outline" label="Terms of Service" last>
                 <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
               </SettingRow>
             </TouchableOpacity>

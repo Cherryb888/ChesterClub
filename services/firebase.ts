@@ -4,6 +4,7 @@ import {
   signOut as firebaseSignOut, onAuthStateChanged,
   sendPasswordResetEmail as firebaseResetPassword,
   GoogleAuthProvider, OAuthProvider, signInWithCredential,
+  reauthenticateWithCredential, EmailAuthProvider, deleteUser,
   User,
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -146,6 +147,25 @@ export function getCurrentUser(): User | null {
 
 export function getDb() {
   return db;
+}
+
+// ─── Account Deletion ───
+//
+// Re-authenticates the user (required by Firebase before sensitive ops),
+// then deletes the Firebase Auth account.
+// Caller is responsible for wiping Firestore data first.
+
+export async function reauthenticateWithPassword(password: string): Promise<void> {
+  const user = auth?.currentUser;
+  if (!user || !user.email) throw new Error('No signed-in user');
+  const credential = EmailAuthProvider.credential(user.email, password);
+  await reauthenticateWithCredential(user, credential);
+}
+
+export async function deleteCurrentUser(): Promise<void> {
+  const user = auth?.currentUser;
+  if (!user) throw new Error('No signed-in user');
+  await deleteUser(user);
 }
 
 export { isConfigured as isFirebaseConfigured };
