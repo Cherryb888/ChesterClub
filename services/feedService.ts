@@ -1,6 +1,6 @@
 import {
   doc, setDoc, getDocs, collection, query, orderBy, limit,
-  serverTimestamp, Timestamp,
+  serverTimestamp, Timestamp, onSnapshot, QuerySnapshot, DocumentData,
 } from 'firebase/firestore';
 import { getDb, getCurrentUser, isFirebaseConfigured } from './firebase';
 import { getProfile } from './storage';
@@ -95,6 +95,101 @@ export async function shareLifeStage(stage: string): Promise<void> {
     subtitle: 'A major milestone reached!',
     icon: '🎉',
   });
+}
+
+// ─── Real-time Friend Feed (onSnapshot) ───
+
+/**
+ * Subscribes to real-time feed updates from the current user + all friends.
+ * Sets up one onSnapshot listener per user and merges the results.
+ * Returns an unsubscribe function — call it when the component unmounts.
+ */
+export function subscribeFriendFeed(
+  callback: (items: FeedItem[]) => void,
+): () => void {
+  const db = getDb();
+  const user = getCurrentUser();
+  if (!db || !user) {
+    callback([]);
+    return () => {};
+  }
+
+  // Snapshot data keyed by uid so each listener can update its slice independently
+  const slices = new Map<string, FeedItem[]>();
+  const unsubscribers: Array<() => void> = [];
+
+  function merge() {
+    const all: FeedItem[] = [];
+    for (const items of slices.values()) all.push(...items);
+    all.sort((a, b) => b.timestamp - a.timestamp);
+    callback(all.slice(0, 50));
+  }
+
+  function parseSnapshot(
+    snap: QuerySnapshot<DocumentData>,
+    uid: string,
+    displayName: string,
+    isMe: boolean,
+  ): FeedItem[] {
+    return snap.docs.map(docSnap => {
+      const data = docSnap.data();
+      const createdAt = data.createdAt;
+      const timestamp =
+        createdAt instanceof Timestamp
+          ? createdAt.toMillis()
+          : typeof createdAt === 'number'
+            ? createdAt
+            : Date.now();
+      return {
+        id: docSnap.id,
+        uid,
+        displayName: data.displayName || displayName,
+        type: data.type,
+        title: data.title,
+        subtitle: data.subtitle,
+        icon: data.icon || '📝',
+        timestamp,
+        isMe,
+      } as FeedItem;
+    });
+  }
+
+  function attachListener(uid: string, displayName: string, isMe: boolean) {
+    const feedRef = collection(db!, 'users', uid, 'feed');
+    const q = query(feedRef, orderBy('createdAt', 'desc'), limit(10));
+    const unsub = onSnapshot(
+      q,
+      snap => {
+        slices.set(uid, parseSnapshot(snap, uid, displayName, isMe));
+        merge();
+      },
+      () => {
+        // Permission denied or offline — skip this user's slice
+        slices.delete(uid);
+        merge();
+      },
+    );
+    unsubscribers.push(unsub);
+  }
+
+  // Attach self listener immediately, then fetch friends and attach theirs
+  attachListener(user.uid, 'You', true);
+
+  getFriendsList()
+    .then(friends => {
+      for (const f of friends) {
+        if (!slices.has(f.uid)) {
+          attachListener(f.uid, f.displayName, false);
+        }
+      }
+    })
+    .catch(() => {
+      // Friends list unavailable — self feed still streams
+    });
+
+  return () => {
+    for (const unsub of unsubscribers) unsub();
+  };
 }
 
 // ─── Load Friend Feed ───
