@@ -72,4 +72,5 @@ export type { DailyDigState } from './dailyDigStorage';
 export type { AppSettings } from './settingsStorage';
 
 // Re-export nutrition utilities (previously re-exported from the old storage.ts)
-export { calculateNutritionScore } from '../../utils/nutrition';
+export { calculateNutritionScore, getMealBreakdown, getNutritionRecommendations } from '../../utils/nutrition';
+export type { MealBreakdown, NutritionRecommendation } from '../../utils/nutrition';
