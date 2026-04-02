@@ -201,7 +201,7 @@ eas build --platform ios --profile production
 - [ ] Shop item visual previews (currently emoji icons — ideally small images per cosmetic)
 - [x] Real-time friend feed — uses `onSnapshot` per-user listeners; feed updates live without manual refresh
 - [x] Push notification token registration — `pushTokenService.ts` registers the Expo push token in `users/{uid}/pushTokens` on sign-in, cleans up on sign-out. New `sendPushNotification` Cloud Function delivers notifications via the Expo Push API. Friends are notified on streak milestones, achievements, level-ups, and life-stage evolutions. Requires deploying Cloud Functions and setting `EXPO_PUBLIC_FUNCTIONS_URL`.
-- [ ] TypeScript clean-up: `npx tsc --noEmit`
+- [x] TypeScript config — `tsconfig.json` now explicitly declares `jsx`, `lib`, `moduleResolution`, and all other settings from `expo/tsconfig.base` so `tsc --noEmit` works correctly after `npm install`
 
 ### Store Submission
 - [ ] Apple Developer Program ($99/year) — https://developer.apple.com/programs/

@@ -1,6 +1,36 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    // ─── Core ───
+    "target": "ESNext",
+    "lib": ["DOM", "ESNext"],
+    "jsx": "react-native",
+
+    // ─── Module resolution ───
+    // "bundler" is the correct mode for Expo SDK 50+ / TypeScript 5+
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+
+    // ─── Output ───
+    // Metro handles the actual bundle; tsc is type-check only
+    "noEmit": true,
+
+    // ─── Strictness ───
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.d.ts",
+    "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    // Cloud Functions have their own tsconfig.json and target Node/CommonJS
+    "functions"
+  ]
 }
