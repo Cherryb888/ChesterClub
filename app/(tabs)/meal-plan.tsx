@@ -4,6 +4,7 @@ import {
   SafeAreaView, ActivityIndicator, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { MealPlan, MealPlanDay, PlannedMeal, FoodItem } from '../../types';
 import { getProfile, saveMealPlan, getMealPlan, addFoodToLog, addRecentFood, feedChester } from '../../services/storage';
@@ -19,6 +20,7 @@ const MEAL_ICONS: Record<string, string> = {
 };
 
 export default function MealPlanScreen() {
+  const router = useRouter();
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -38,12 +40,14 @@ export default function MealPlanScreen() {
   };
 
   const generateNewPlan = async () => {
+    if (!isPremium) {
+      router.push('/(tabs)/premium');
+      return;
+    }
     setLoading(true);
     try {
       const profile = await getProfile();
-      // Premium users get fully personalised plans using their diet profile
-      const dietProfile = profile.isPremiumMax ? profile.dietProfile : undefined;
-      const result = await generateMealPlan(profile.goals, dietProfile);
+      const result = await generateMealPlan(profile.goals, profile.dietProfile);
       const plan: MealPlan = {
         id: Date.now().toString(),
         createdAt: Date.now(),
@@ -94,10 +98,10 @@ export default function MealPlanScreen() {
 
         {/* Generate button */}
         <TouchableOpacity
-          style={[styles.generateBtn, loading && { opacity: 0.7 }]}
+          style={[styles.generateBtn, loading && { opacity: 0.7 }, !isPremium && styles.generateBtnLocked]}
           onPress={generateNewPlan}
           disabled={loading}
-          accessibilityLabel={loading ? 'Generating meal plan' : mealPlan ? 'Generate new meal plan' : 'Plan my week'}
+          accessibilityLabel={!isPremium ? 'Unlock AI Meal Plans with Premium' : loading ? 'Generating meal plan' : mealPlan ? 'Generate new meal plan' : 'Plan my week'}
           accessibilityRole="button"
           accessibilityState={{ disabled: loading }}
         >
@@ -105,6 +109,12 @@ export default function MealPlanScreen() {
             <View style={styles.loadingRow}>
               <ActivityIndicator color="#fff" />
               <Text style={styles.generateText}>Chester is planning your meals...</Text>
+            </View>
+          ) : !isPremium ? (
+            <View style={styles.loadingRow}>
+              <Ionicons name="lock-closed" size={20} color="#fff" />
+              <Text style={styles.generateText}>Unlock AI Meal Plans</Text>
+              <Text style={{ fontSize: 16 }}>👑</Text>
             </View>
           ) : (
             <View style={styles.loadingRow}>
@@ -122,7 +132,7 @@ export default function MealPlanScreen() {
           <View style={styles.premiumHint}>
             <Text style={{ fontSize: 16 }}>👑</Text>
             <Text style={styles.premiumHintText}>
-              <Text style={{ fontWeight: '800', color: Colors.primary }}>Premium</Text> members get personalised plans based on diet, allergies, cuisines & cooking level
+              <Text style={{ fontWeight: '800', color: Colors.primary }}>Premium feature</Text> — personalised 7-day plans based on your diet, allergies, cuisines & cooking level
             </Text>
           </View>
         )}
@@ -248,6 +258,10 @@ const styles = StyleSheet.create({
     padding: Spacing.md, alignItems: 'center',
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+  },
+  generateBtnLocked: {
+    backgroundColor: Colors.textSecondary,
+    shadowColor: Colors.textSecondary,
   },
   premiumHint: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
