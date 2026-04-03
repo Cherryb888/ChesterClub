@@ -84,7 +84,7 @@ export async function shareLifeStage(stage: string): Promise<void> {
     puppy: 'Puppy', young: 'Young Dog', adult: 'Adult Dog',
     champion: 'Champion', golden: 'Golden Chester',
   };
-  const title = `Chester evolved to ${stageNames[stage] || stage}!`;
+  const title = `Chester matured to ${stageNames[stage] || stage}!`;
   const subtitle = 'A major milestone reached!';
   await postToFeed({ type: 'life_stage', title, subtitle, icon: '🎉' });
   await _notifyFriends(title, subtitle);
