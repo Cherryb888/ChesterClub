@@ -114,8 +114,8 @@ async function scheduleWaterReminders(settings: AppSettings): Promise<void> {
 
   if (!settings.waterReminders) return;
 
-  // Schedule every 2 hours from 9am to 9pm
-  const waterHours = [9, 11, 13, 15, 17, 19, 21];
+  // Schedule 4x daily: 9am, 12pm, 3pm, 7pm
+  const waterHours = [9, 12, 15, 19];
 
   for (const hour of waterHours) {
     const message = WATER_MESSAGES[Math.floor(Math.random() * WATER_MESSAGES.length)];
