@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions,
+  View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions, Image,
 } from 'react-native';
 import { Colors, FontSize, Spacing, BorderRadius } from '../constants/theme';
 import { StreakMilestone } from '../constants/streakRewards';
+
+const CHESTER_PROUD = require('../assets/chester/rive/chester-proud-teary.png');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -99,6 +101,16 @@ export default function StreakMilestoneModal({ milestone, visible, onClose }: Pr
           {/* Top accent */}
           <View style={[styles.topAccent, isGolden && styles.topAccentGolden]} />
 
+          {/* Chester Proud Teary Eyed */}
+          <Animated.View style={[styles.chesterContainer, { transform: [{ scale: fireScale }] }]}>
+            <Image
+              source={CHESTER_PROUD}
+              style={styles.chesterImage}
+              resizeMode="contain"
+              accessibilityLabel="Chester looking proud with teary eyes"
+            />
+          </Animated.View>
+
           {/* Fire emoji */}
           <Animated.View style={{ transform: [{ scale: fireScale }] }}>
             <Text style={styles.fireEmoji}>
@@ -180,6 +192,13 @@ const styles = StyleSheet.create({
   },
   topAccentGolden: {
     backgroundColor: '#FFD700',
+  },
+  chesterContainer: {
+    marginBottom: Spacing.xs,
+  },
+  chesterImage: {
+    width: 100,
+    height: 100,
   },
   fireEmoji: {
     fontSize: 48,
