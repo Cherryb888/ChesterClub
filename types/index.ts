@@ -62,6 +62,13 @@ export interface UserProfile {
   onboardingComplete: boolean;
   weightHistory: { date: string; weight: number; unit: 'kg' | 'lbs' }[];
   isPremiumMax: boolean; // highest tier subscription
+  subscription?: {
+    plan: 'monthly' | 'yearly';
+    purchasedAt: number;   // epoch ms
+    expiresAt: number;     // epoch ms (local estimate — used for graceful expiry)
+    transactionId: string;
+    platform: 'ios' | 'android';
+  };
 }
 
 // ─── Diet & Health Profile ───

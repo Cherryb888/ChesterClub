@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,6 +9,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getProfile, saveProfile } from '../../services/storage';
 import { UserProfile } from '../../types';
+import {
+  initIAP,
+  teardownIAP,
+  fetchSubscriptions,
+  purchaseSubscription,
+  setupPurchaseListeners,
+  restorePremiumPurchases,
+  isIAPAvailable,
+} from '../../services/iapService';
+import type { SubscriptionPlan } from '../../services/iapService';
 
 const FEATURES = [
   {
@@ -61,11 +71,22 @@ const FEATURES = [
   },
 ];
 
+// Fallback prices shown before store products are loaded
+const FALLBACK_PRICES: Record<SubscriptionPlan, string> = {
+  monthly: '$4.99/mo',
+  yearly: '$29.99/yr',
+};
+
 export default function PremiumScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('yearly');
+  const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [storePrices, setStorePrices] = useState<Partial<Record<SubscriptionPlan, string>>>({});
+  const cleanupListeners = useRef<(() => void) | null>(null);
 
+  // Load profile
   useFocusEffect(useCallback(() => {
     (async () => {
       const p = await getProfile();
@@ -73,29 +94,99 @@ export default function PremiumScreen() {
     })();
   }, []));
 
-  const handleSubscribe = () => {
-    // In production, this would integrate with App Store / Google Play subscriptions
-    Alert.alert(
-      'Coming Soon',
-      'Premium subscriptions will be available when ChesterClub launches on the App Store. For now, you can preview all premium features!',
-      [
-        { text: 'OK' },
-        {
-          text: 'Preview Premium', onPress: async () => {
-            if (profile) {
-              const updated = { ...profile, isPremiumMax: true };
-              await saveProfile(updated);
-              setProfile(updated);
-              Alert.alert('Premium Activated!', 'You now have access to all premium features. 2x coins are active!');
-            }
-          }
+  // Init IAP connection and fetch real prices from the store
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      await initIAP();
+
+      if (!mounted) return;
+
+      // Wire up purchase listeners for this screen's lifetime
+      cleanupListeners.current = setupPurchaseListeners(
+        // onSuccess
+        async () => {
+          const updated = await getProfile();
+          if (mounted) setProfile(updated);
+          setPurchasing(false);
+          Alert.alert(
+            '🎉 Welcome to Premium!',
+            'You now have full access to all premium features. 2x coins are active!',
+          );
         },
-      ]
-    );
+        // onError
+        (message) => {
+          setPurchasing(false);
+          Alert.alert('Purchase Failed', message);
+        },
+      );
+
+      // Fetch real prices (localizedPrice comes from the store)
+      const subs = await fetchSubscriptions();
+      if (!mounted) return;
+      const prices: Partial<Record<SubscriptionPlan, string>> = {};
+      for (const sub of subs) {
+        if (sub.productId.includes('monthly') && (sub as any).localizedPrice) {
+          prices.monthly = `${(sub as any).localizedPrice}/mo`;
+        }
+        if (sub.productId.includes('yearly') && (sub as any).localizedPrice) {
+          prices.yearly = `${(sub as any).localizedPrice}/yr`;
+        }
+      }
+      setStorePrices(prices);
+    })();
+
+    return () => {
+      mounted = false;
+      cleanupListeners.current?.();
+      teardownIAP();
+    };
+  }, []);
+
+  const priceLabel = (plan: SubscriptionPlan) =>
+    storePrices[plan] ?? FALLBACK_PRICES[plan];
+
+  const handleSubscribe = async () => {
+    if (!isIAPAvailable()) {
+      Alert.alert(
+        'Store Unavailable',
+        'The app store is not reachable right now. Please check your connection and try again.',
+      );
+      return;
+    }
+    setPurchasing(true);
+    try {
+      await purchaseSubscription(selectedPlan);
+      // Result arrives via purchaseUpdatedListener — setPurchasing(false) happens there
+    } catch (err: any) {
+      setPurchasing(false);
+      if (err?.code !== 'E_USER_CANCELLED') {
+        Alert.alert('Purchase Failed', err?.message ?? 'Something went wrong. Please try again.');
+      }
+    }
   };
 
-  const handleRestore = () => {
-    Alert.alert('Restore Purchases', 'No previous purchases found. Premium subscriptions will be available at launch.');
+  const handleRestore = async () => {
+    if (!isIAPAvailable()) {
+      Alert.alert('Store Unavailable', 'Cannot reach the app store right now. Please try again later.');
+      return;
+    }
+    setRestoring(true);
+    try {
+      const restored = await restorePremiumPurchases();
+      if (restored) {
+        const updated = await getProfile();
+        setProfile(updated);
+        Alert.alert('Purchases Restored', 'Your Premium subscription has been restored!');
+      } else {
+        Alert.alert('Nothing to Restore', 'No previous purchases were found for this account.');
+      }
+    } catch (err: any) {
+      Alert.alert('Restore Failed', err?.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setRestoring(false);
+    }
   };
 
   if (!profile) return null;
@@ -106,7 +197,12 @@ export default function PremiumScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Back button */}
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
 
@@ -128,6 +224,11 @@ export default function PremiumScreen() {
           <View style={styles.activeBadge}>
             <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
             <Text style={styles.activeBadgeText}>Premium Active</Text>
+            {profile.subscription && (
+              <Text style={styles.activePlanText}>
+                {profile.subscription.plan === 'monthly' ? 'Monthly plan' : 'Yearly plan'}
+              </Text>
+            )}
           </View>
         )}
 
@@ -138,11 +239,15 @@ export default function PremiumScreen() {
               style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]}
               onPress={() => setSelectedPlan('monthly')}
               accessibilityRole="button"
-              accessibilityLabel="Monthly plan, $4.99 per month"
+              accessibilityLabel={`Monthly plan, ${priceLabel('monthly')}`}
               accessibilityState={{ selected: selectedPlan === 'monthly' }}
             >
               <Text style={styles.planName}>Monthly</Text>
-              <Text style={styles.planPrice}>$4.99</Text>
+              <Text style={styles.planPrice}>
+                {storePrices.monthly
+                  ? storePrices.monthly.replace('/mo', '')
+                  : '$4.99'}
+              </Text>
               <Text style={styles.planPeriod}>per month</Text>
             </TouchableOpacity>
 
@@ -150,14 +255,18 @@ export default function PremiumScreen() {
               style={[styles.planCard, styles.planCardBest, selectedPlan === 'yearly' && styles.planCardSelected]}
               onPress={() => setSelectedPlan('yearly')}
               accessibilityRole="button"
-              accessibilityLabel="Yearly plan, $29.99 per year, best value, save 50%"
+              accessibilityLabel={`Yearly plan, ${priceLabel('yearly')}, best value, save 50%`}
               accessibilityState={{ selected: selectedPlan === 'yearly' }}
             >
               <View style={styles.bestBadge}>
                 <Text style={styles.bestBadgeText}>Best Value</Text>
               </View>
               <Text style={styles.planName}>Yearly</Text>
-              <Text style={styles.planPrice}>$29.99</Text>
+              <Text style={styles.planPrice}>
+                {storePrices.yearly
+                  ? storePrices.yearly.replace('/yr', '')
+                  : '$29.99'}
+              </Text>
               <Text style={styles.planPeriod}>per year</Text>
               <Text style={styles.planSaving}>Save 50%</Text>
             </TouchableOpacity>
@@ -170,7 +279,11 @@ export default function PremiumScreen() {
             {isPremium ? 'Your Premium Features' : 'What You Get'}
           </Text>
           {FEATURES.map((feature, i) => (
-            <View key={i} style={styles.featureRow} accessibilityLabel={`${feature.title}: ${feature.description}${feature.free ? '' : ', premium only'}`}>
+            <View
+              key={i}
+              style={styles.featureRow}
+              accessibilityLabel={`${feature.title}: ${feature.description}${feature.free ? '' : ', premium only'}`}
+            >
               <View style={[styles.featureIcon, !feature.free && styles.featureIconPremium]}>
                 <Ionicons name={feature.icon as any} size={20} color={feature.free ? Colors.secondary : '#FFD700'} />
               </View>
@@ -191,16 +304,37 @@ export default function PremiumScreen() {
 
         {/* CTA */}
         {!isPremium && (
-          <TouchableOpacity style={styles.subscribeBtn} onPress={handleSubscribe} accessibilityRole="button" accessibilityLabel={`Start Premium, ${selectedPlan === 'monthly' ? '$4.99 per month' : '$29.99 per year'}`}>
-            <Text style={styles.subscribeBtnText}>
-              Start Premium - {selectedPlan === 'monthly' ? '$4.99/mo' : '$29.99/yr'}
-            </Text>
+          <TouchableOpacity
+            style={[styles.subscribeBtn, purchasing && styles.subscribeBtnDisabled]}
+            onPress={handleSubscribe}
+            disabled={purchasing}
+            accessibilityRole="button"
+            accessibilityLabel={`Start Premium, ${priceLabel(selectedPlan)}`}
+            accessibilityState={{ disabled: purchasing }}
+          >
+            {purchasing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.subscribeBtnText}>
+                Start Premium — {priceLabel(selectedPlan)}
+              </Text>
+            )}
           </TouchableOpacity>
         )}
 
         {/* Restore */}
-        <TouchableOpacity style={styles.restoreBtn} onPress={handleRestore} accessibilityRole="button" accessibilityLabel="Restore Purchases">
-          <Text style={styles.restoreBtnText}>Restore Purchases</Text>
+        <TouchableOpacity
+          style={styles.restoreBtn}
+          onPress={handleRestore}
+          disabled={restoring}
+          accessibilityRole="button"
+          accessibilityLabel="Restore Purchases"
+        >
+          {restoring ? (
+            <ActivityIndicator color={Colors.textSecondary} size="small" />
+          ) : (
+            <Text style={styles.restoreBtnText}>Restore Purchases</Text>
+          )}
         </TouchableOpacity>
 
         {!isPremium && (
@@ -242,8 +376,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm, backgroundColor: Colors.success + '15',
     padding: Spacing.md, borderRadius: BorderRadius.lg,
     marginBottom: Spacing.lg, borderWidth: 1, borderColor: Colors.success + '30',
+    flexWrap: 'wrap',
   },
   activeBadgeText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.success },
+  activePlanText: { fontSize: FontSize.sm, color: Colors.success + 'CC' },
 
   // Plans
   plans: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xl },
@@ -299,9 +435,11 @@ const styles = StyleSheet.create({
     padding: Spacing.lg, alignItems: 'center',
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
+    minHeight: 56, justifyContent: 'center',
   },
+  subscribeBtnDisabled: { opacity: 0.7 },
   subscribeBtnText: { color: '#fff', fontSize: FontSize.lg, fontWeight: '800' },
-  restoreBtn: { alignItems: 'center', padding: Spacing.md, marginTop: Spacing.sm },
+  restoreBtn: { alignItems: 'center', padding: Spacing.md, marginTop: Spacing.sm, minHeight: 44, justifyContent: 'center' },
   restoreBtnText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
   legalText: {
     fontSize: 10, color: Colors.textLight, textAlign: 'center',

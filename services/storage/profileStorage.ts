@@ -58,6 +58,7 @@ export async function getProfile(): Promise<UserProfile> {
     if (!profile.goals) profile.goals = DEFAULT_GOALS;
     if (profile.goals.dailyWaterGlasses === undefined) profile.goals.dailyWaterGlasses = 8;
     if (profile.isPremiumMax === undefined) profile.isPremiumMax = false;
+    if (profile.isPremiumMax && !profile.subscription) profile.subscription = undefined;
     if (profile.chester.previousStreak === undefined) profile.chester.previousStreak = 0;
     if (profile.chester.streakShieldActive === undefined) profile.chester.streakShieldActive = false;
     if (!profile.weightHistory) profile.weightHistory = [];
