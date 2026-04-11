@@ -33,11 +33,10 @@ export function addFoodToLog(item: FoodItem, date?: string): Promise<DailyLog> {
   const key = date || getTodayKey();
   return withLogLock(key, async () => {
     const log = await getDailyLog(key);
-    log.items.push(item);
-    recalcLogTotals(log);
-    await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
+    const updated = recalcLogTotals({ ...log, items: [...log.items, item] });
+    await AsyncStorage.setItem(getLogKey(key), JSON.stringify(updated));
     smartSync({ type: 'foodLog', date: key }).catch(() => {});
-    return log;
+    return updated;
   });
 }
 
@@ -45,11 +44,10 @@ export function removeFoodFromLog(itemId: string, date?: string): Promise<DailyL
   const key = date || getTodayKey();
   return withLogLock(key, async () => {
     const log = await getDailyLog(key);
-    log.items = log.items.filter(i => i.id !== itemId);
-    recalcLogTotals(log);
-    await AsyncStorage.setItem(getLogKey(key), JSON.stringify(log));
+    const updated = recalcLogTotals({ ...log, items: log.items.filter(i => i.id !== itemId) });
+    await AsyncStorage.setItem(getLogKey(key), JSON.stringify(updated));
     smartSync({ type: 'foodLog', date: key }).catch(() => {});
-    return log;
+    return updated;
   });
 }
 

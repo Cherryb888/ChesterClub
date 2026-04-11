@@ -1,4 +1,4 @@
-import { GeminiFoodResult, MealPlanDay, UserGoals, DietProfile } from '../types';
+import { GeminiFoodResult, MealPlanDay, UserGoals, DietProfile, DailyLog } from '../types';
 import { getCurrentUser } from './firebase';
 
 // Cloud Functions base URL — set this to your deployed functions URL
@@ -17,7 +17,20 @@ const useCloudFunctions = !!FUNCTIONS_BASE_URL;
 
 // ─── Prompt Constants (direct-mode fallback only) ───
 
-const FOOD_IMAGE_PROMPT = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.
+function buildDailyContextSnippet(log: DailyLog, goals: UserGoals): string {
+  const rem = (consumed: number, goal: number) => Math.max(0, goal - consumed);
+  return `Today's intake so far:
+- Calories: ${log.totalCalories} / ${goals.dailyCalories} (${rem(log.totalCalories, goals.dailyCalories)} remaining)
+- Protein: ${log.totalProtein}g / ${goals.dailyProtein}g (${rem(log.totalProtein, goals.dailyProtein)}g remaining)
+- Carbs: ${log.totalCarbs}g / ${goals.dailyCarbs}g (${rem(log.totalCarbs, goals.dailyCarbs)}g remaining)
+- Fat: ${log.totalFat}g / ${goals.dailyFat}g (${rem(log.totalFat, goals.dailyFat)}g remaining)
+
+Score this meal relative to what the user still needs today — "great" if it fills key gaps, "poor" if they are already over their goals.`;
+}
+
+function buildFoodImagePrompt(log?: DailyLog, goals?: UserGoals): string {
+  const contextSection = log && goals ? `\n\n${buildDailyContextSnippet(log, goals)}` : '';
+  return `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.${contextSection}
 
 Analyze this food photo and return a JSON response with this exact structure:
 {
@@ -41,9 +54,11 @@ Rules:
 - overallScore: "great" for very healthy meals, "good" for balanced, "okay" for moderate, "poor" for very unhealthy
 - chesterReaction should be fun, dog-themed, and encouraging (e.g. "Woof! That salad looks pawsome!" or "Ruff... that's a lot of treats, but I still love you!")
 - Return ONLY valid JSON, no markdown formatting, no code blocks`;
+}
 
-function buildTextFoodPrompt(description: string): string {
-  return `You are a nutrition AI for a food tracking app with a dog mascot named Chester.
+function buildTextFoodPrompt(description: string, log?: DailyLog, goals?: UserGoals): string {
+  const contextSection = log && goals ? `\n\n${buildDailyContextSnippet(log, goals)}` : '';
+  return `You are a nutrition AI for a food tracking app with a dog mascot named Chester.${contextSection}
 
 The user described their food as: "${description}"
 
@@ -175,13 +190,28 @@ async function throttledFetch(url: string, options: RequestInit): Promise<Respon
   return response;
 }
 
+// Serialises today's totals + goals for the Cloud Functions path
+function buildDailyContextPayload(log?: DailyLog, goals?: UserGoals) {
+  if (!log || !goals) return undefined;
+  return {
+    consumedCalories: log.totalCalories,
+    consumedProtein: log.totalProtein,
+    consumedCarbs: log.totalCarbs,
+    consumedFat: log.totalFat,
+    goalCalories: goals.dailyCalories,
+    goalProtein: goals.dailyProtein,
+    goalCarbs: goals.dailyCarbs,
+    goalFat: goals.dailyFat,
+  };
+}
+
 // ═══════════════════════════════════════════
 // Public API — auto-routes through Cloud Functions or direct Gemini
 // ═══════════════════════════════════════════
 
-export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodResult> {
+export async function analyzeFoodImage(base64Image: string, todayLog?: DailyLog, goals?: UserGoals): Promise<GeminiFoodResult> {
   if (useCloudFunctions) {
-    return callFunction<GeminiFoodResult>('analyzeFoodImage', { base64Image });
+    return callFunction<GeminiFoodResult>('analyzeFoodImage', { base64Image, dailyContext: buildDailyContextPayload(todayLog, goals) });
   }
 
   // ── Direct fallback ──
@@ -191,7 +221,7 @@ export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodR
     body: JSON.stringify({
       contents: [{
         parts: [
-          { text: FOOD_IMAGE_PROMPT },
+          { text: buildFoodImagePrompt(todayLog, goals) },
           { inline_data: { mime_type: 'image/jpeg', data: base64Image } },
         ],
       }],
@@ -214,9 +244,9 @@ export async function analyzeFoodImage(base64Image: string): Promise<GeminiFoodR
   return safeJsonParse<GeminiFoodResult>(cleaned, 'food scan');
 }
 
-export async function analyzeTextFood(description: string): Promise<GeminiFoodResult> {
+export async function analyzeTextFood(description: string, todayLog?: DailyLog, goals?: UserGoals): Promise<GeminiFoodResult> {
   if (useCloudFunctions) {
-    return callFunction<GeminiFoodResult>('analyzeTextFood', { description });
+    return callFunction<GeminiFoodResult>('analyzeTextFood', { description, dailyContext: buildDailyContextPayload(todayLog, goals) });
   }
 
   // ── Direct fallback ──
@@ -224,7 +254,7 @@ export async function analyzeTextFood(description: string): Promise<GeminiFoodRe
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: buildTextFoodPrompt(description) }] }],
+      contents: [{ parts: [{ text: buildTextFoodPrompt(description, todayLog, goals) }] }],
       generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
     }),
   });

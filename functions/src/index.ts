@@ -41,6 +41,39 @@ function validateNumber(val: unknown, min: number, max: number, fallback: number
   return Math.round(num);
 }
 
+// ─── Daily context helper ───
+
+interface DailyContextPayload {
+  consumedCalories: number; consumedProtein: number; consumedCarbs: number; consumedFat: number;
+  goalCalories: number; goalProtein: number; goalCarbs: number; goalFat: number;
+}
+
+function buildDailyContextSnippet(ctx: unknown): string {
+  if (!ctx || typeof ctx !== 'object') return '';
+  const c = ctx as Partial<DailyContextPayload>;
+  const consumed = {
+    calories: validateNumber(c.consumedCalories, 0, 20000, -1),
+    protein: validateNumber(c.consumedProtein, 0, 2000, -1),
+    carbs: validateNumber(c.consumedCarbs, 0, 2000, -1),
+    fat: validateNumber(c.consumedFat, 0, 1000, -1),
+  };
+  const goal = {
+    calories: validateNumber(c.goalCalories, 800, 10000, -1),
+    protein: validateNumber(c.goalProtein, 10, 500, -1),
+    carbs: validateNumber(c.goalCarbs, 10, 800, -1),
+    fat: validateNumber(c.goalFat, 10, 400, -1),
+  };
+  if (Object.values(consumed).some(v => v < 0) || Object.values(goal).some(v => v < 0)) return '';
+  const rem = (c: number, g: number) => Math.max(0, g - c);
+  return `\n\nToday's intake so far:
+- Calories: ${consumed.calories} / ${goal.calories} (${rem(consumed.calories, goal.calories)} remaining)
+- Protein: ${consumed.protein}g / ${goal.protein}g (${rem(consumed.protein, goal.protein)}g remaining)
+- Carbs: ${consumed.carbs}g / ${goal.carbs}g (${rem(consumed.carbs, goal.carbs)}g remaining)
+- Fat: ${consumed.fat}g / ${goal.fat}g (${rem(consumed.fat, goal.fat)}g remaining)
+
+Score this meal relative to what the user still needs today — "great" if it fills key gaps, "poor" if they are already over their goals.`;
+}
+
 // ─── Auth helper ───
 
 async function verifyAuth(req: functions.https.Request): Promise<string> {
@@ -145,7 +178,7 @@ export const analyzeFoodImage = functions.https.onRequest(async (req, res) => {
     const uid = await verifyAuth(req);
     checkRateLimit(uid);
 
-    const { base64Image } = req.body;
+    const { base64Image, dailyContext } = req.body;
     if (!base64Image || typeof base64Image !== 'string') {
       res.status(400).json({ error: 'Missing base64Image' });
       return;
@@ -155,7 +188,8 @@ export const analyzeFoodImage = functions.https.onRequest(async (req, res) => {
       return;
     }
 
-    const prompt = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.
+    const contextSection = buildDailyContextSnippet(dailyContext);
+    const prompt = `You are a nutrition AI assistant for a food tracking app called ChesterClub. The app has a virtual dog mascot named Chester.${contextSection}
 
 Analyze this food photo and return a JSON response with this exact structure:
 {
@@ -210,6 +244,7 @@ export const analyzeTextFood = functions.https.onRequest(async (req, res) => {
     const uid = await verifyAuth(req);
     checkRateLimit(uid);
 
+    const { dailyContext } = req.body;
     const rawDescription = req.body.description;
     if (!rawDescription || typeof rawDescription !== 'string') {
       res.status(400).json({ error: 'Missing description' });
@@ -221,7 +256,8 @@ export const analyzeTextFood = functions.https.onRequest(async (req, res) => {
       return;
     }
 
-    const prompt = `You are a nutrition AI for a food tracking app with a dog mascot named Chester.
+    const contextSection = buildDailyContextSnippet(dailyContext);
+    const prompt = `You are a nutrition AI for a food tracking app with a dog mascot named Chester.${contextSection}
 
 The user described their food as: "${description}"
 

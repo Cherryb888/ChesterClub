@@ -5,6 +5,9 @@ export interface FoodItem {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number; // mg
   servingSize: string;
   imageUri?: string;
   timestamp: number;
@@ -19,6 +22,9 @@ export interface DailyLog {
   totalProtein: number;
   totalCarbs: number;
   totalFat: number;
+  totalFiber?: number;
+  totalSugar?: number;
+  totalSodium?: number; // mg
 }
 
 export interface UserGoals {

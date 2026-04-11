@@ -1,13 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Image, StyleSheet, Animated, Easing } from 'react-native';
 
-// ─── 4 dig frames ───
+// ─── Rive feature flag ────────────────────────────────────────────────────────
+// Set to true once assets/animations/chester.riv is in place.
+const RIVE_ENABLED = false;
+// When enabling: uncomment Rive imports at top, set RIVE_ENABLED = true.
+// import Rive from 'rive-react-native';
+// const CHESTER_RIV = require('../../assets/animations/chester.riv');
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── 5 dig frames (new Rive artwork) ─────────────────────────────────────────
+// 0: idle        — Chester standing ready
+// 1: bending     — Bending down, about to dig
+// 2: digging     — Active digging pose
+// 3: buried      — Head deep in the hole
+// 4: found-bone  — Chester triumphantly holding the find
 const DIG_FRAMES = [
-  require('../../assets/chester/chester-dig-idle.png'),  // 0: Ready to dig
-  require('../../assets/chester/chester-dig-down.png'),  // 1: Paws digging
-  require('../../assets/chester/chester-dig-deep.png'),  // 2: Head down in hole
-  require('../../assets/chester/chester-dig-pull.png'),  // 3: Pulling bone out (reveal)
+  require('../../assets/chester/rive/chester-idle.png'),
+  require('../../assets/chester/rive/chester-bending-down.png'),
+  require('../../assets/chester/rive/chester-digging.png'),
+  require('../../assets/chester/rive/chester-buried.png'),
+  require('../../assets/chester/rive/chester-found-bone.png'),
 ];
+
+// Frame sequence for the digging phase:
+// idle → bending → digging → buried → digging → buried → digging → found-bone
+const DIG_SEQUENCE = [0, 1, 2, 3, 2, 3, 2, 4];
 
 interface Props {
   /** 'idle' | 'digging' | 'reveal' */
@@ -18,34 +36,45 @@ interface Props {
 export default function ChesterDigAnimation({ phase, size = 220 }: Props) {
   const [frameIndex, setFrameIndex] = useState(0);
   const dirtOpacity = useRef(new Animated.Value(0)).current;
-  const dirtY1 = useRef(new Animated.Value(0)).current;
-  const dirtY2 = useRef(new Animated.Value(0)).current;
+  const dirtY1      = useRef(new Animated.Value(0)).current;
+  const dirtY2      = useRef(new Animated.Value(0)).current;
   const revealScale = useRef(new Animated.Value(1)).current;
 
+  // ── Rive dig state machine ref (active when RIVE_ENABLED = true) ────────────
+  // const riveRef = useRef<RiveRef | null>(null);
+  // ─────────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
+    if (RIVE_ENABLED) {
+      // ── Rive path (uncomment when chester.riv is ready) ───────────────────
+      // if (phase === 'digging') riveRef.current?.fireState('ChesterStateMachine', 'onDigStart');
+      // if (phase === 'reveal')  riveRef.current?.fireState('ChesterStateMachine', 'onDigReveal');
+      // if (phase === 'idle')    riveRef.current?.reset();
+      return;
+    }
+
+    // ── PNG path ─────────────────────────────────────────────────────────────
     if (phase === 'digging') {
       setFrameIndex(0);
 
-      // Frame sequence: idle → down → deep → down → deep → down → deep → pull
-      const frameSequence = [0, 1, 2, 1, 2, 1, 2, 3];
       let i = 0;
       const interval = setInterval(() => {
         i++;
-        if (i < frameSequence.length) {
-          setFrameIndex(frameSequence[i]);
+        if (i < DIG_SEQUENCE.length) {
+          setFrameIndex(DIG_SEQUENCE[i]);
         } else {
           clearInterval(interval);
         }
       }, 350);
 
-      // Show dirt flying
+      // Fade dirt particles in
       Animated.timing(dirtOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
 
-      // Animate dirt particles bouncing
+      // Bounce dirt particles
       Animated.loop(
         Animated.sequence([
           Animated.timing(dirtY1, { toValue: -20, duration: 250, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-          Animated.timing(dirtY1, { toValue: 0, duration: 250, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          Animated.timing(dirtY1, { toValue:   0, duration: 250, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
         ]),
         { iterations: 8 },
       ).start();
@@ -53,7 +82,7 @@ export default function ChesterDigAnimation({ phase, size = 220 }: Props) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(dirtY2, { toValue: -15, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-          Animated.timing(dirtY2, { toValue: 0, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          Animated.timing(dirtY2, { toValue:   0, duration: 300, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
         ]),
         { iterations: 6 },
       ).start();
@@ -61,12 +90,12 @@ export default function ChesterDigAnimation({ phase, size = 220 }: Props) {
       return () => clearInterval(interval);
 
     } else if (phase === 'reveal') {
-      setFrameIndex(3); // Pull frame — Chester with bone
+      setFrameIndex(4); // Chester Found Bone
       Animated.timing(dirtOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
       // Triumphant pop
       Animated.sequence([
-        Animated.timing(revealScale, { toValue: 1.1, duration: 200, useNativeDriver: true }),
-        Animated.spring(revealScale, { toValue: 1, tension: 50, friction: 5, useNativeDriver: true }),
+        Animated.timing(revealScale, { toValue: 1.12, duration: 200, useNativeDriver: true }),
+        Animated.spring(revealScale,  { toValue: 1, tension: 50, friction: 5, useNativeDriver: true }),
       ]).start();
 
     } else {
@@ -81,28 +110,49 @@ export default function ChesterDigAnimation({ phase, size = 220 }: Props) {
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      {/* Dirt particles */}
-      <Animated.View style={[styles.dirtContainer, { opacity: dirtOpacity }]}>
-        <Animated.Text style={[styles.dirt, { left: '20%', transform: [{ translateY: dirtY1 }] }]}>
-          🟤
-        </Animated.Text>
-        <Animated.Text style={[styles.dirt, { right: '25%', transform: [{ translateY: dirtY2 }] }]}>
-          🟤
-        </Animated.Text>
-        <Animated.Text style={[styles.dirt, { left: '40%', transform: [{ translateY: dirtY1 }] }]}>
-          💨
-        </Animated.Text>
-      </Animated.View>
 
-      {/* Chester frame */}
-      <Animated.View style={{ transform: [{ scale: revealScale }] }}>
-        <Image
-          source={DIG_FRAMES[frameIndex]}
-          style={{ width: size, height: size * 0.65, borderRadius: 12 }}
-          resizeMode="contain"
-          accessibilityLabel={phase === 'digging' ? 'Chester is digging' : phase === 'reveal' ? 'Chester found something' : 'Chester ready to dig'}
+      {/* ── Rive component (active when RIVE_ENABLED = true) ──────────────── */}
+      {/* {RIVE_ENABLED && (
+        <Rive
+          ref={riveRef}
+          source={CHESTER_RIV}
+          artboardName="ChesterArtboard"
+          stateMachineName="ChesterStateMachine"
+          style={{ width: size, height: size }}
         />
-      </Animated.View>
+      )} */}
+
+      {/* ── PNG path ────────────────────────────────────────────────────────── */}
+      {!RIVE_ENABLED && (
+        <>
+          {/* Dirt particles */}
+          <Animated.View style={[styles.dirtContainer, { opacity: dirtOpacity }]}>
+            <Animated.Text style={[styles.dirt, { left: '20%', transform: [{ translateY: dirtY1 }] }]}>
+              🟤
+            </Animated.Text>
+            <Animated.Text style={[styles.dirt, { right: '25%', transform: [{ translateY: dirtY2 }] }]}>
+              🟤
+            </Animated.Text>
+            <Animated.Text style={[styles.dirt, { left: '40%', transform: [{ translateY: dirtY1 }] }]}>
+              💨
+            </Animated.Text>
+          </Animated.View>
+
+          {/* Chester frame */}
+          <Animated.View style={{ transform: [{ scale: revealScale }] }}>
+            <Image
+              source={DIG_FRAMES[frameIndex]}
+              style={{ width: size, height: size * 0.75, borderRadius: 12 }}
+              resizeMode="contain"
+              accessibilityLabel={
+                phase === 'digging' ? 'Chester is digging'
+                : phase === 'reveal' ? 'Chester found something!'
+                : 'Chester ready to dig'
+              }
+            />
+          </Animated.View>
+        </>
+      )}
     </View>
   );
 }
@@ -115,7 +165,7 @@ const styles = StyleSheet.create({
   },
   dirtContainer: {
     position: 'absolute',
-    bottom: '25%',
+    bottom: '20%',
     width: '100%',
     zIndex: 10,
   },

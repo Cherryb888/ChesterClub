@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions,
+  View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions, Image,
 } from 'react-native';
 import { Colors, FontSize, Spacing, BorderRadius } from '../constants/theme';
 import { AchievementDefinition, RARITY_COLORS } from '../constants/achievements';
+
+const CHESTER_DAZZLED = require('../assets/chester/rive/chester-dazzled.png');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -97,6 +99,16 @@ export default function AchievementUnlockedModal({ achievement, visible, onClose
             </Text>
           </View>
 
+          {/* Chester Dazzled */}
+          <Animated.View style={[styles.chesterContainer, { transform: [{ scale: iconBounce }] }]}>
+            <Image
+              source={CHESTER_DAZZLED}
+              style={styles.chesterImage}
+              resizeMode="contain"
+              accessibilityLabel="Chester looking dazzled"
+            />
+          </Animated.View>
+
           {/* Icon */}
           <Animated.View style={[styles.iconContainer, { transform: [{ scale: iconBounce }] }]}>
             <View style={[styles.iconCircle, { borderColor: rarityColor, backgroundColor: rarityColor + '15' }]}>
@@ -172,6 +184,13 @@ const styles = StyleSheet.create({
   },
   rarityText: {
     display: 'none', // visual only via color bar
+  },
+  chesterContainer: {
+    marginBottom: Spacing.sm,
+  },
+  chesterImage: {
+    width: 96,
+    height: 96,
   },
   iconContainer: {
     marginBottom: Spacing.md,
