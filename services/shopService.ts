@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getShopItemById, ShopCategory } from '../constants/shopItems';
 import { getProfile, saveProfile, activateStreakShield } from './storage';
+import { emitChesterEvent } from './chesterEvents';
 
 // ─── Shop Service ───
 //
@@ -77,6 +78,13 @@ export async function purchaseItem(itemId: string): Promise<{ success: boolean; 
   state.ownedItems.push(itemId);
   await saveShopState(state);
 
+  emitChesterEvent({
+    type: 'shop_purchase',
+    itemId: item.id,
+    itemName: item.name,
+    category: item.category,
+  });
+
   return { success: true };
 }
 
@@ -89,6 +97,13 @@ export async function equipItem(itemId: string): Promise<boolean> {
 
   state.equipped[item.category] = itemId;
   await saveShopState(state);
+
+  emitChesterEvent({
+    type: 'cosmetic_equipped',
+    itemName: item.name,
+    category: item.category,
+  });
+
   return true;
 }
 

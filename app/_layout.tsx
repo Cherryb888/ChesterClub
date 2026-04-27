@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Colors } from '../constants/theme';
 import { isOnboardingComplete, runMigrations, getSettings } from '../services/storage';
 import { onAuthChange, isFirebaseConfigured } from '../services/firebase';
@@ -8,6 +9,8 @@ import { onUserSignIn, performFullSync } from '../services/firestore';
 import { startConnectivityListener, stopConnectivityListener } from '../services/syncQueue';
 import { initializeNotifications, rescheduleAll } from '../services/notifications';
 import { registerPushToken, unregisterPushToken } from '../services/pushTokenService';
+import { ChesterReactionProvider } from '../contexts/ChesterReactionContext';
+import ChesterReactionOverlay from '../components/Chester/ChesterReactionOverlay';
 
 export default function RootLayout() {
   // Run data migrations on app start
@@ -49,19 +52,22 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <>
-      <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: Colors.background },
-          animation: 'slide_from_right',
-        }}
-      >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
-        <Stack.Screen name="scan-result" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      </Stack>
-    </>
+    <SafeAreaProvider>
+      <ChesterReactionProvider>
+        <StatusBar style="dark" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: Colors.background },
+            animation: 'slide_from_right',
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
+          <Stack.Screen name="scan-result" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        </Stack>
+        <ChesterReactionOverlay />
+      </ChesterReactionProvider>
+    </SafeAreaProvider>
   );
 }

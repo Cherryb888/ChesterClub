@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WaterLog } from '../../types';
 import { smartSync } from '../syncQueue';
+import { emitChesterEvent } from '../chesterEvents';
 import { KEYS, getTodayKey } from './keys';
 import { getProfile } from './profileStorage';
 
@@ -19,6 +20,7 @@ export async function addWaterGlass(date?: string): Promise<WaterLog> {
   const log = await getWaterLog(key);
   const profile = await getProfile();
   const goal = profile.goals.dailyWaterGlasses;
+  const wasGoalReached = log.goalReached;
 
   if (!log.goalReached) {
     log.glasses += 1;
@@ -28,6 +30,16 @@ export async function addWaterGlass(date?: string): Promise<WaterLog> {
   }
   await AsyncStorage.setItem(KEYS.WATER_PREFIX + key, JSON.stringify(log));
   smartSync({ type: 'waterLog', date: key }).catch(() => {});
+
+  // Only emit for today's adds — backfilling earlier dates shouldn't show a popup
+  if (!date || date === getTodayKey()) {
+    emitChesterEvent({
+      type: 'water_logged',
+      glasses: log.glasses,
+      goalReached: log.goalReached && !wasGoalReached,
+    });
+  }
+
   return log;
 }
 
