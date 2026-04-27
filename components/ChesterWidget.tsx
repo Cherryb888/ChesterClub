@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Image, ImageSourcePropType, StyleSheet, View } from 'react-native';
+import ChesterCosmeticOverlay from './Chester/ChesterCosmeticOverlay';
+import type { ChesterState as ChesterMoodState } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -14,6 +16,23 @@ export type ChesterState =
   | 'buried'
   | 'digging'
   | 'bone';
+
+/**
+ * Map widget pose-states to the mood enum used by the cosmetic system so
+ * per-mood anchor deltas (sleepy hat tilt, etc.) apply consistently.
+ */
+const STATE_TO_MOOD: Record<ChesterState, ChesterMoodState['mood']> = {
+  idle:     'neutral',
+  sleeping: 'sleepy',
+  excited:  'excited',
+  proud:    'happy',
+  sad:      'sad',
+  dazzled:  'excited',
+  bending:  'neutral',
+  buried:   'neutral',
+  digging:  'neutral',
+  bone:     'happy',
+};
 
 interface ChesterWidgetProps {
   state?: ChesterState;
@@ -211,6 +230,10 @@ export default function ChesterWidget({
           source={IMAGES[state]}
           style={{ width: size, height: size }}
           resizeMode="contain"
+        />
+        <ChesterCosmeticOverlay
+          containerSize={size}
+          mood={STATE_TO_MOOD[state]}
         />
       </Animated.View>
     </View>

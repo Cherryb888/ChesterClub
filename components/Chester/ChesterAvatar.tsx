@@ -5,6 +5,7 @@ import { ChesterState, ChesterLifeStage } from '../../types';
 import { getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
 import { getEquippedItems } from '../../services/shopService';
 import { getShopItemById, BACKGROUND_COLORS } from '../../constants/shopItems';
+import ChesterCosmeticOverlay, { VirtualCosmetic } from './ChesterCosmeticOverlay';
 import type { RiveRef } from 'rive-react-native';
 
 // ─── Rive feature flag ────────────────────────────────────────────────────────
@@ -169,37 +170,13 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
             </View>
           )}
 
-          {/* Crown for golden (no shop hat) */}
-          {stage === 'golden' && !equippedHat && (
-            <View style={styles.crownContainer}>
-              <Text style={[styles.crown, { fontSize: size === 'small' ? 16 : size === 'medium' ? 22 : 28 }]}>👑</Text>
-            </View>
-          )}
-
-          {/* Medal for champion (no shop accessory) */}
-          {stage === 'champion' && !equippedAccessory && (
-            <View style={styles.medalContainer}>
-              <Text style={[styles.medal, { fontSize: size === 'small' ? 14 : size === 'medium' ? 18 : 22 }]}>🏅</Text>
-            </View>
-          )}
-
-          {/* Shop hat */}
-          {equippedHat && (
-            <View style={styles.crownContainer}>
-              <Text style={{ fontSize: size === 'small' ? 16 : size === 'medium' ? 24 : 32, textAlign: 'center' }}>
-                {equippedHat.icon}
-              </Text>
-            </View>
-          )}
-
-          {/* Shop accessory */}
-          {equippedAccessory && (
-            <View style={styles.accessoryContainer}>
-              <Text style={{ fontSize: size === 'small' ? 14 : size === 'medium' ? 20 : 26, textAlign: 'center' }}>
-                {equippedAccessory.icon}
-              </Text>
-            </View>
-          )}
+          {/* Cosmetic overlays (equipped items + life-stage rewards) */}
+          <ChesterCosmeticOverlay
+            containerSize={imageSize}
+            mood={chester.mood}
+            virtual={buildStageRewards(stage, equippedHat, equippedAccessory)}
+            emojiScale={size === 'small' ? 0.85 : 1}
+          />
         </View>
 
         {/* Mood indicator dot */}
@@ -268,6 +245,26 @@ function getStreakMultiplier(streak: number): number {
   return 1;
 }
 
+/**
+ * Life-stage cosmetics (👑 / 🏅) are surfaced as virtual cosmetics so they
+ * flow through the same slot system as shop items. They yield to equipped
+ * shop items in the same slot — your shiny new wizard hat trumps the auto-crown.
+ */
+function buildStageRewards(
+  stage: ChesterLifeStage,
+  equippedHat: ReturnType<typeof getShopItemById> | null,
+  equippedAccessory: ReturnType<typeof getShopItemById> | null,
+): VirtualCosmetic[] {
+  const out: VirtualCosmetic[] = [];
+  if (stage === 'golden' && !equippedHat) {
+    out.push({ id: 'stage_crown', slot: 'hat', emoji: '👑' });
+  }
+  if (stage === 'champion' && !equippedAccessory) {
+    out.push({ id: 'stage_medal', slot: 'neck', emoji: '🏅' });
+  }
+  return out;
+}
+
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
@@ -308,22 +305,6 @@ const styles = StyleSheet.create({
   },
   hungryEmoji: {
     fontSize: 16,
-  },
-  crownContainer: {
-    position: 'absolute',
-    top: -6,
-    alignItems: 'center',
-  },
-  crown: {
-    textAlign: 'center',
-  },
-  medalContainer: {
-    position: 'absolute',
-    bottom: -2,
-    alignItems: 'center',
-  },
-  medal: {
-    textAlign: 'center',
   },
   moodDot: {
     width: 14,
@@ -428,14 +409,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: '#B8860B',
     fontWeight: '600',
-  },
-  accessoryContainer: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    borderRadius: 12,
-    padding: 2,
   },
   titleBadge: {
     fontSize: FontSize.xs,

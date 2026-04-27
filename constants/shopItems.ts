@@ -1,7 +1,11 @@
 // ─── Shop Items ───
 //
-// Cosmetic items purchasable with coins. Emoji-based for MVP.
-// Categories determine where the cosmetic renders on Chester.
+// Cosmetic items purchasable with coins. Items support either an emoji icon
+// (lightweight default) or a PNG asset rendered through the cosmetic slot
+// system. Categories determine the default slot; items may override.
+
+import type { ImageSourcePropType } from 'react-native';
+import type { CosmeticSlot, SlotOffset } from './cosmeticSlots';
 
 export type ShopCategory = 'hat' | 'accessory' | 'background' | 'title' | 'consumable' | 'dig_exclusive';
 
@@ -11,8 +15,14 @@ export interface ShopItem {
   description: string;
   price: number;
   category: ShopCategory;
-  icon: string; // emoji representation
+  icon: string; // emoji representation — used as fallback or shop tile
   premium: boolean; // requires premium to purchase
+  /** Optional PNG asset. When present, rendered on Chester via the slot system. */
+  image?: ImageSourcePropType;
+  /** Override the slot inferred from category (e.g. accessory sunglasses → 'face'). */
+  slot?: CosmeticSlot;
+  /** Per-item anchor tweaks layered on top of the slot default. */
+  slotOffset?: SlotOffset;
 }
 
 export const SHOP_ITEMS: ShopItem[] = [
@@ -85,6 +95,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     category: 'accessory',
     icon: '😎',
     premium: false,
+    slot: 'face',
   },
   {
     id: 'acc_bowtie',
@@ -121,6 +132,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     category: 'accessory',
     icon: '🦸',
     premium: true,
+    slot: 'back',
   },
 
   // ─── Backgrounds ───
@@ -219,6 +231,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     category: 'dig_exclusive',
     icon: '🌻',
     premium: false,
+    slot: 'hat',
   },
 ];
 
