@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KEYS, getTodayKey } from './keys';
 import { rollDigReward, DigReward } from '../../constants/dailyDig';
 import { addCoins, activateStreakShield } from './chesterStorage';
+import { emitChesterEvent } from '../chesterEvents';
 
 // ─── Daily Dig State ───
 
@@ -95,6 +96,7 @@ export async function performDig(): Promise<DigReward> {
   state.history.push({ rewardId: reward.id, date: today });
 
   await saveDailyDigState(state);
+  emitChesterEvent({ type: 'dig_completed', reward });
   return reward;
 }
 

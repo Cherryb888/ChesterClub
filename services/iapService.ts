@@ -20,17 +20,20 @@ import {
   initConnection,
   endConnection,
   getSubscriptions,
+  getProducts,
   requestSubscription,
+  requestPurchase,
   purchaseUpdatedListener,
   purchaseErrorListener,
   flushFailedPurchasesCachedAsPendingAndroid,
   finishTransaction,
   getAvailablePurchases,
 } from 'react-native-iap';
-import type { Subscription, ProductPurchase, PurchaseError } from 'react-native-iap';
+import type { Subscription, Product, ProductPurchase, PurchaseError } from 'react-native-iap';
 import { Platform } from 'react-native';
 import { getProfile, saveProfile } from './storage';
 import { syncProfileToCloud } from './firestore';
+import { addCoins } from './storage/chesterStorage';
 
 // ─── Product IDs ────────────────────────────────────────────────────────────
 // Must match exactly what you register in App Store Connect / Google Play Console.
@@ -38,6 +41,9 @@ import { syncProfileToCloud } from './firestore';
 export const SKUS = {
   MONTHLY: 'com.chesterclub.app.premium.monthly',
   YEARLY: 'com.chesterclub.app.premium.yearly',
+  COINS_SMALL:  'com.chesterclub.app.coins.small',   // 100 coins
+  COINS_MEDIUM: 'com.chesterclub.app.coins.medium',  // 600 coins (20% bonus)
+  COINS_LARGE:  'com.chesterclub.app.coins.large',   // 1800 coins (50% bonus)
 } as const;
 
 export type SubscriptionPlan = 'monthly' | 'yearly';
@@ -46,6 +52,29 @@ const SKU_TO_PLAN: Record<string, SubscriptionPlan> = {
   [SKUS.MONTHLY]: 'monthly',
   [SKUS.YEARLY]: 'yearly',
 };
+
+// ─── Coin pack catalogue ────────────────────────────────────────────────────
+
+export type CoinPackId = 'small' | 'medium' | 'large';
+
+export interface CoinPack {
+  id: CoinPackId;
+  sku: string;
+  coins: number;
+  fallbackPrice: string; // shown before store products are loaded
+  badge?: string;        // optional value badge (e.g. "Best value")
+}
+
+export const COIN_PACKS: CoinPack[] = [
+  { id: 'small',  sku: SKUS.COINS_SMALL,  coins: 100,  fallbackPrice: '$0.99' },
+  { id: 'medium', sku: SKUS.COINS_MEDIUM, coins: 600,  fallbackPrice: '$3.99', badge: 'Most popular' },
+  { id: 'large',  sku: SKUS.COINS_LARGE,  coins: 1800, fallbackPrice: '$9.99', badge: 'Best value' },
+];
+
+const SKU_TO_COIN_PACK: Record<string, CoinPack> = COIN_PACKS.reduce((acc, p) => {
+  acc[p.sku] = p;
+  return acc;
+}, {} as Record<string, CoinPack>);
 
 // Local expiry estimate — the store handles actual renewal, this is only used
 // for a graceful client-side downgrade check if the store can't be reached.
@@ -96,6 +125,16 @@ export async function fetchSubscriptions(): Promise<Subscription[]> {
   }
 }
 
+export async function fetchCoinPackProducts(): Promise<Product[]> {
+  if (!_connected) return [];
+  try {
+    return await getProducts({ skus: COIN_PACKS.map(p => p.sku) });
+  } catch (err) {
+    console.warn('[IAP] getProducts failed:', err);
+    return [];
+  }
+}
+
 // ─── Purchase flow ───────────────────────────────────────────────────────────
 
 export async function purchaseSubscription(plan: SubscriptionPlan): Promise<void> {
@@ -103,6 +142,12 @@ export async function purchaseSubscription(plan: SubscriptionPlan): Promise<void
   // requestSubscription is intentionally not awaited — the result comes back
   // via the purchaseUpdatedListener set up in setupPurchaseListeners().
   await requestSubscription({ sku });
+}
+
+export async function purchaseCoinPack(packId: CoinPackId): Promise<void> {
+  const pack = COIN_PACKS.find(p => p.id === packId);
+  if (!pack) throw new Error(`Unknown coin pack: ${packId}`);
+  await requestPurchase({ sku: pack.sku });
 }
 
 // ─── Internal: activate premium in local storage ─────────────────────────────
@@ -128,22 +173,48 @@ async function activatePremium(
 
 // ─── Listeners ───────────────────────────────────────────────────────────────
 
+export interface PurchaseSuccess {
+  kind: 'subscription' | 'coin_pack';
+  /** For coin packs: how many coins were credited. */
+  coinsAdded?: number;
+}
+
 /**
  * Sets up purchase update + error listeners.
  * Returns a cleanup function — call it when the component unmounts.
+ *
+ * The same listener handles both subscriptions and coin packs. The kind is
+ * inferred from the productId, and the right finishTransaction flag (consumable
+ * vs not) is applied so the store releases the slot for repeat purchases.
  */
 export function setupPurchaseListeners(
-  onSuccess: () => void,
+  onSuccess: (result: PurchaseSuccess) => void,
   onError: (message: string) => void,
 ): () => void {
   const successListener = purchaseUpdatedListener(async (purchase: ProductPurchase) => {
     const { productId, transactionId, transactionDate } = purchase;
     if (!transactionId) return;
 
-    await activatePremium(productId, transactionId, transactionDate ?? Date.now());
-    // Acknowledge the transaction — required on both platforms to avoid refunds.
+    const coinPack = SKU_TO_COIN_PACK[productId];
+    if (coinPack) {
+      // Consumable: credit coins, mark consumable so user can buy again
+      await addCoins(coinPack.coins);
+      await finishTransaction({ purchase, isConsumable: true });
+      syncProfileToCloud().catch(() => {});
+      onSuccess({ kind: 'coin_pack', coinsAdded: coinPack.coins });
+      return;
+    }
+
+    if (SKU_TO_PLAN[productId]) {
+      await activatePremium(productId, transactionId, transactionDate ?? Date.now());
+      await finishTransaction({ purchase, isConsumable: false });
+      onSuccess({ kind: 'subscription' });
+      return;
+    }
+
+    // Unknown SKU — still finish so the queue clears, but warn loudly.
+    console.warn('[IAP] Unrecognised productId in purchaseUpdated:', productId);
     await finishTransaction({ purchase, isConsumable: false });
-    onSuccess();
   });
 
   const errorListener = purchaseErrorListener((error: PurchaseError) => {

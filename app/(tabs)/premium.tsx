@@ -10,8 +10,6 @@ import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { getProfile, saveProfile } from '../../services/storage';
 import { UserProfile } from '../../types';
 import {
-  initIAP,
-  teardownIAP,
   fetchSubscriptions,
   purchaseSubscription,
   setupPurchaseListeners,
@@ -94,26 +92,32 @@ export default function PremiumScreen() {
     })();
   }, []));
 
-  // Init IAP connection and fetch real prices from the store
+  // Subscribe to purchase results for this screen's lifetime + fetch prices.
+  // The IAP connection is initialised once at the root layout, not here.
   useEffect(() => {
     let mounted = true;
 
     (async () => {
-      await initIAP();
-
       if (!mounted) return;
 
       // Wire up purchase listeners for this screen's lifetime
       cleanupListeners.current = setupPurchaseListeners(
         // onSuccess
-        async () => {
+        async (result) => {
           const updated = await getProfile();
           if (mounted) setProfile(updated);
           setPurchasing(false);
-          Alert.alert(
-            '🎉 Welcome to Premium!',
-            'You now have full access to all premium features. 2x coins are active!',
-          );
+          if (result.kind === 'subscription') {
+            Alert.alert(
+              '🎉 Welcome to Premium!',
+              'You now have full access to all premium features. 2x coins are active!',
+            );
+          } else if (result.kind === 'coin_pack') {
+            Alert.alert(
+              '🪙 Coins added!',
+              `${result.coinsAdded} coins added to your balance.`,
+            );
+          }
         },
         // onError
         (message) => {
@@ -140,7 +144,6 @@ export default function PremiumScreen() {
     return () => {
       mounted = false;
       cleanupListeners.current?.();
-      teardownIAP();
     };
   }, []);
 

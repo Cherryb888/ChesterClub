@@ -4,6 +4,7 @@ import { AchievementDefinition } from '../../constants/achievements';
 import { StreakMilestone, getMilestoneForDay } from '../../constants/streakRewards';
 import { checkAchievements, AchievementCheckContext } from '../achievementChecker';
 import { calculateNutritionScore } from '../../utils/nutrition';
+import { emitChesterEvent } from '../chesterEvents';
 import { KEYS, getTodayKey } from './keys';
 import { getProfile, saveProfile } from './profileStorage';
 import { getDailyLog } from './foodLogStorage';
@@ -228,6 +229,9 @@ export async function feedChester(foodScore: string): Promise<ChesterState> {
   const profile = await getProfile();
   const today = getTodayKey();
   const chester = profile.chester;
+  const startLevel = chester.level;
+  const startStreak = chester.streak;
+  let triggeredMilestone: StreakMilestone | null = null;
 
   // Update streak
   if (chester.lastFedDate !== today) {
@@ -245,6 +249,7 @@ export async function feedChester(foodScore: string): Promise<ChesterState> {
     if (milestone) {
       chester.coins += profile.isPremiumMax ? milestone.coins * 2 : milestone.coins;
       await queueMilestone(milestone);
+      triggeredMilestone = milestone;
     }
   }
 
@@ -302,6 +307,24 @@ export async function feedChester(foodScore: string): Promise<ChesterState> {
 
   profile.chester = chester;
   await saveProfile(profile);
+
+  // Emit reaction events. Order matters for queue UX: meal first, then
+  // streak milestone, then per-achievement pops.
+  emitChesterEvent({
+    type: 'chester_fed',
+    score: (foodScore === 'great' || foodScore === 'good' || foodScore === 'okay' || foodScore === 'poor') ? foodScore : 'good',
+    newLevel: chester.level,
+    leveledUp: chester.level > startLevel,
+    newStreak: chester.streak,
+    streakIncreased: chester.streak > startStreak,
+  });
+  if (triggeredMilestone) {
+    emitChesterEvent({ type: 'streak_milestone', milestone: triggeredMilestone });
+  }
+  for (const achievement of newlyUnlocked) {
+    emitChesterEvent({ type: 'achievement_unlocked', achievement });
+  }
+
   return chester;
 }
 

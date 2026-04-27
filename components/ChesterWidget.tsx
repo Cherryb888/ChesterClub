@@ -1,5 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Image, ImageSourcePropType, StyleSheet, View } from 'react-native';
+import { Animated, Image, ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
+import ChesterCosmeticOverlay from './Chester/ChesterCosmeticOverlay';
+import ChesterSparkles from './Chester/ChesterSparkles';
+import { emitChesterEvent } from '../services/chesterEvents';
+import type { ChesterState as ChesterMoodState } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -14,6 +18,23 @@ export type ChesterState =
   | 'buried'
   | 'digging'
   | 'bone';
+
+/**
+ * Map widget pose-states to the mood enum used by the cosmetic system so
+ * per-mood anchor deltas (sleepy hat tilt, etc.) apply consistently.
+ */
+const STATE_TO_MOOD: Record<ChesterState, ChesterMoodState['mood']> = {
+  idle:     'neutral',
+  sleeping: 'sleepy',
+  excited:  'excited',
+  proud:    'happy',
+  sad:      'sad',
+  dazzled:  'excited',
+  bending:  'neutral',
+  buried:   'neutral',
+  digging:  'neutral',
+  bone:     'happy',
+};
 
 interface ChesterWidgetProps {
   state?: ChesterState;
@@ -193,6 +214,8 @@ export default function ChesterWidget({
     outputRange: ['-10deg', '10deg'],
   });
 
+  const mood = STATE_TO_MOOD[state];
+
   return (
     <View style={[styles.container, { width: size, height: size }]}>
       <Animated.View
@@ -207,11 +230,23 @@ export default function ChesterWidget({
           },
         ]}
       >
-        <Image
-          source={IMAGES[state]}
+        <Pressable
+          onPress={() => emitChesterEvent({ type: 'chester_petted', mood })}
+          accessibilityRole="button"
+          accessibilityLabel="Pet Chester"
           style={{ width: size, height: size }}
-          resizeMode="contain"
-        />
+        >
+          <Image
+            source={IMAGES[state]}
+            style={{ width: size, height: size }}
+            resizeMode="contain"
+          />
+          <ChesterSparkles mood={mood} containerSize={size} />
+          <ChesterCosmeticOverlay
+            containerSize={size}
+            mood={mood}
+          />
+        </Pressable>
       </Animated.View>
     </View>
   );

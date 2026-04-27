@@ -11,6 +11,7 @@ import { getProfile } from '../../services/storage';
 import {
   getOwnedItems, getEquippedItems, purchaseItem, equipItem, unequipCategory,
 } from '../../services/shopService';
+import CoinPackSheet from '../../components/shop/CoinPackSheet';
 
 const CATEGORY_LABELS: Record<ShopCategory, { label: string; icon: string }> = {
   hat: { label: 'Hats', icon: '🎩' },
@@ -18,6 +19,7 @@ const CATEGORY_LABELS: Record<ShopCategory, { label: string; icon: string }> = {
   background: { label: 'Backgrounds', icon: '🖼️' },
   title: { label: 'Titles', icon: '📛' },
   consumable: { label: 'Items', icon: '🛡️' },
+  dig_exclusive: { label: 'Dig Finds', icon: '🦴' },
 };
 
 export default function ShopScreen() {
@@ -27,6 +29,7 @@ export default function ShopScreen() {
   const [owned, setOwned] = useState<string[]>([]);
   const [equipped, setEquipped] = useState<Record<string, string>>({});
   const [activeCategory, setActiveCategory] = useState<ShopCategory>('hat');
+  const [coinSheetVisible, setCoinSheetVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     const profile = await getProfile();
@@ -106,11 +109,23 @@ export default function ShopScreen() {
       <ScreenHeader
         title="Chester's Shop"
         rightElement={
-          <View style={styles.coinsBadge} accessibilityLabel={`${coins} coins available`}>
+          <TouchableOpacity
+            style={styles.coinsBadge}
+            onPress={() => setCoinSheetVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`${coins} coins available, tap to buy more`}
+          >
             <Text style={styles.coinsIcon}>🪙</Text>
             <Text style={styles.coinsText}>{coins}</Text>
-          </View>
+            <Text style={styles.coinsPlus}>+</Text>
+          </TouchableOpacity>
         }
+      />
+
+      <CoinPackSheet
+        visible={coinSheetVisible}
+        onClose={() => setCoinSheetVisible(false)}
+        onPurchased={() => loadData()}
       />
 
       {/* Category Tabs */}
@@ -218,6 +233,15 @@ const styles = StyleSheet.create({
   },
   coinsIcon: { fontSize: 16 },
   coinsText: { fontSize: FontSize.md, fontWeight: '800', color: '#B8860B' },
+  coinsPlus: {
+    fontSize: FontSize.md,
+    fontWeight: '800',
+    color: '#B8860B',
+    marginLeft: 6,
+    paddingLeft: 6,
+    borderLeftWidth: 1,
+    borderLeftColor: '#B8860B' + '40',
+  },
 
   // Category tabs
   categoryTabs: {
