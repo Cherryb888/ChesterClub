@@ -11,6 +11,7 @@ import { initializeNotifications, rescheduleAll } from '../services/notification
 import { registerPushToken, unregisterPushToken } from '../services/pushTokenService';
 import { ChesterReactionProvider } from '../contexts/ChesterReactionContext';
 import ChesterReactionOverlay from '../components/Chester/ChesterReactionOverlay';
+import { initIAP, teardownIAP, checkSubscriptionExpiry } from '../services/iapService';
 
 export default function RootLayout() {
   // Run data migrations on app start
@@ -49,6 +50,16 @@ export default function RootLayout() {
     });
 
     return unsubscribe;
+  }, []);
+
+  // Connect to the App Store / Play Billing on startup, and downgrade
+  // gracefully if a previously-stored subscription has lapsed.
+  useEffect(() => {
+    (async () => {
+      await initIAP();
+      await checkSubscriptionExpiry();
+    })().catch(console.error);
+    return () => { teardownIAP().catch(() => {}); };
   }, []);
 
   return (
