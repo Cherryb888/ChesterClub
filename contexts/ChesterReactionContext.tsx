@@ -226,6 +226,23 @@ function eventToReaction(event: ChesterEvent): ChesterReactionPayload | null {
         durationMs: 2500,
       };
 
+    case 'chester_petted': {
+      const moodMessages: Record<typeof event.mood, string[]> = {
+        happy:   ['Hi friend!', 'Such a good boop!', 'Tail wagging!'],
+        excited: ['Zoomies incoming!', 'Best day ever!', 'AWOOOO!'],
+        neutral: ['Boop!', 'Hello you!', "What's up?"],
+        hungry:  ['Got a snack?', 'My tummy says hi.', 'Feed me?'],
+        sleepy:  ['Mmmh... five more minutes.', 'Cosy.', 'Yawn...'],
+        sad:     ['Thanks for checking on me.', 'You make me feel better.', 'I needed that.'],
+      };
+      const pool = moodMessages[event.mood] ?? moodMessages.neutral;
+      return {
+        message: pool[Math.floor(Math.random() * pool.length)],
+        animation: 'happy',
+        durationMs: 2200,
+      };
+    }
+
     default:
       return null;
   }

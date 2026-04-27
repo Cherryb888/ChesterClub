@@ -26,7 +26,8 @@ export type ChesterEvent =
   | { type: 'water_logged'; glasses: number; goalReached: boolean }
   | { type: 'dig_completed'; reward: DigReward }
   | { type: 'shop_purchase'; itemId: string; itemName: string; category: ShopCategory }
-  | { type: 'cosmetic_equipped'; itemName: string; category: ShopCategory };
+  | { type: 'cosmetic_equipped'; itemName: string; category: ShopCategory }
+  | { type: 'chester_petted'; mood: 'happy' | 'excited' | 'neutral' | 'hungry' | 'sleepy' | 'sad' };
 
 type Listener = (event: ChesterEvent) => void;
 

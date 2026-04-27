@@ -1,11 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Image, Animated } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { ChesterState, ChesterLifeStage } from '../../types';
 import { getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
 import { getEquippedItems } from '../../services/shopService';
 import { getShopItemById, BACKGROUND_COLORS } from '../../constants/shopItems';
+import { emitChesterEvent } from '../../services/chesterEvents';
+import { useChesterAlive } from '../../hooks/useChesterAlive';
 import ChesterCosmeticOverlay, { VirtualCosmetic } from './ChesterCosmeticOverlay';
+import ChesterSparkles from './ChesterSparkles';
 import type { RiveRef } from 'rive-react-native';
 
 // ─── Rive feature flag ────────────────────────────────────────────────────────
@@ -73,31 +77,21 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
   const equippedTitle     = equipped.title      ? getShopItemById(equipped.title)      : null;
   const bgColors          = equippedBg ? BACKGROUND_COLORS[equippedBg.id] : null;
 
-  // ── PNG animations (active when RIVE_ENABLED = false) ──────────────────────
-  const breatheAnim = useRef(new Animated.Value(1)).current;
-  const bounceAnim  = useRef(new Animated.Value(0)).current;
+  // ── Reanimated "alive" layer (breathing, idle pulse, tap wiggle) ──────────
+  const alive = useChesterAlive({ mood: chester.mood, enabled: !RIVE_ENABLED });
 
-  useEffect(() => {
-    if (RIVE_ENABLED) return; // Rive handles all motion when enabled
+  const aliveStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: alive.breathLift.value + alive.tiltY.value },
+      { scale: alive.breathScale.value * alive.idleScale.value * alive.tapScale.value },
+      { rotate: `${alive.wiggleRotate.value + alive.tiltX.value}deg` },
+    ],
+  }));
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(breatheAnim, { toValue: 1.04, duration: 2000, useNativeDriver: true }),
-        Animated.timing(breatheAnim, { toValue: 1,    duration: 2000, useNativeDriver: true }),
-      ])
-    ).start();
-
-    if (chester.mood === 'excited') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(bounceAnim, { toValue: -8, duration: 300, useNativeDriver: true }),
-          Animated.timing(bounceAnim, { toValue:  0, duration: 300, useNativeDriver: true }),
-        ])
-      ).start();
-    } else {
-      bounceAnim.setValue(0);
-    }
-  }, [chester.mood]);
+  const onTap = () => {
+    alive.triggerTap();
+    emitChesterEvent({ type: 'chester_petted', mood: chester.mood });
+  };
 
   // Stage-based border/glow
   const containerBg  = bgColors ? bgColors[0] + '30' : '#FFF8F0';
@@ -124,17 +118,20 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
         }]} />
       )}
 
-      <Animated.View style={RIVE_ENABLED ? undefined : {
-        transform: [{ scale: breatheAnim }, { translateY: bounceAnim }],
-      }}>
-        <View style={[styles.imageContainer, {
-          width: dimensions,
-          height: dimensions,
-          borderRadius: dimensions / 2,
-          borderColor,
-          borderWidth,
-          backgroundColor: containerBg,
-        }]}>
+      <Animated.View style={RIVE_ENABLED ? undefined : aliveStyle}>
+        <Pressable
+          onPress={onTap}
+          accessibilityRole="button"
+          accessibilityLabel="Pet Chester"
+          style={[styles.imageContainer, {
+            width: dimensions,
+            height: dimensions,
+            borderRadius: dimensions / 2,
+            borderColor,
+            borderWidth,
+            backgroundColor: containerBg,
+          }]}>
+          <ChesterSparkles mood={chester.mood} containerSize={dimensions} />
 
           {/* ── Chester body — PNG or Rive ───────────────────────────────── */}
           {RIVE_ENABLED ? (
@@ -177,7 +174,7 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
             virtual={buildStageRewards(stage, equippedHat, equippedAccessory)}
             emojiScale={size === 'small' ? 0.85 : 1}
           />
-        </View>
+        </Pressable>
 
         {/* Mood indicator dot */}
         {size !== 'small' && (
