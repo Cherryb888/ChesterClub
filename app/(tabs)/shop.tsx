@@ -18,6 +18,7 @@ const CATEGORY_LABELS: Record<ShopCategory, { label: string; icon: string }> = {
   background: { label: 'Backgrounds', icon: '🖼️' },
   title: { label: 'Titles', icon: '📛' },
   consumable: { label: 'Items', icon: '🛡️' },
+  dig_exclusive: { label: 'Dig Finds', icon: '🦴' },
 };
 
 export default function ShopScreen() {

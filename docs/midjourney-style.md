@@ -184,6 +184,56 @@ warm, soft, slightly cartoony 2.5D game asset, matte painterly shading, gentle a
 7. Tell me the item is dropped in. I'll wire `image:` into `shopItems.ts`
    and verify positioning.
 
+## v1.0 release — additional items (subject-only)
+
+For these, **construct the full prompt by sandwiching the subject** between
+the universal style block (top of this file) and the universal suffix.
+Keeps things compact while preserving consistency.
+
+### New hats
+
+| itemId             | subject                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| hat_baseball       | a sporty navy-blue baseball cap with a white embroidered "C" on the front, slight curved brim            |
+| hat_beanie         | a soft cosy cable-knit beanie in mustard yellow with a folded cuff, fluffy pom-pom on top                |
+| hat_pirate         | a black pirate captain's tricorn hat with white skull-and-crossbones emblem and golden trim              |
+| hat_top            | a tall glossy black silk top hat with a red ribbon band                                                  |
+| hat_viking         | a metallic silver viking helmet with two short curved horns and leather chinstrap, slightly battle-worn  |
+| hat_witch          | a pointed black witch hat with a wide brim, a buckled grey band, and a spider-silver star               |
+| hat_birthday_cake  | a tiny multi-tier pink-and-white birthday cake hat with lit candles and rainbow sprinkles                |
+| hat_unicorn_horn   | a sparkly pearlescent unicorn horn with iridescent rainbow gradient and tiny gold spirals                |
+| hat_halo           | a glowing golden halo ring, soft luminous edge, slight tilt                                              |
+
+### New accessories
+
+| itemId               | subject                                                                                            |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| acc_headphones       | over-ear chunky headphones in cream and rose-gold, soft cushion pads, slight 3/4 perspective       |
+| acc_monocle          | a single round gold monocle with a thin chain, rim glinting, lens glass with subtle reflection     |
+| acc_snorkel          | a bright orange snorkel mask with clear glass and a yellow breathing tube, front-on                |
+| acc_neck_tie         | a slim crimson business necktie with a neat dimpled knot, slight diagonal stripes                  |
+| acc_pearl_collar     | a delicate strand of cream pearls forming a collar, tiny silver clasp, soft sheen                  |
+| acc_butterfly_wings  | a pair of large open butterfly wings in pastel blue and pink with darker wing-vein patterns, view from behind |
+| acc_glow_collar      | a sleek dark collar studded with small glowing aqua-blue gem lights, neon-soft glow                |
+
+### New backgrounds (full painterly scenes — 2:1 landscape, optional for v1.1)
+
+> Backgrounds currently render as gradients defined in `BACKGROUND_COLORS`.
+> Painterly scene PNGs are nice-to-have, not required for release.
+
+| itemId      | subject                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------ |
+| bg_garden   | a soft watercolour herb garden with rosemary, basil, and tomato plants, low stone wall, gentle sun     |
+| bg_forest   | a cosy pine forest with sun-dappled moss, mushrooms, distant misty trees, autumn leaves                |
+| bg_kennel   | a warm wooden dog kennel interior with a soft red cushion, hanging fairy lights, a chew toy basket     |
+| bg_snowy    | crisp snowy mountain peaks under a pale blue sky, gentle snowfall, tiny pine silhouettes               |
+| bg_aurora   | a starlit night with green and purple aurora ribbons over a frozen lake silhouette                     |
+| bg_galaxy   | a swirling deep-purple galaxy with bright pink and gold star clusters, painterly nebula                |
+
+> For backgrounds, **use 2:1 landscape (`--ar 2:1`)** instead of 1:1, and
+> place the artwork on **the universal solid magenta** background only if you
+> want a transparent cutout — for full-bleed scenes you don't need magenta.
+
 ## Quality bar
 
 Before you save a PNG, ask:
