@@ -6,10 +6,12 @@ import { getChesterLifeStage, LIFE_STAGE_INFO } from '../../services/storage';
 import { getEquippedItems } from '../../services/shopService';
 import { getShopItemById, BACKGROUND_COLORS } from '../../constants/shopItems';
 import type { RiveRef } from 'rive-react-native';
+import ChesterAvatar2D5, { Chester2D5Ref } from './ChesterAvatar2D5';
 
 // ─── Rive feature flag ────────────────────────────────────────────────────────
 // Set to true once assets/animations/chester.riv has been built and placed.
-// When false, the rich mood-based PNG images are used instead.
+// When false, the code-based ChesterAvatar2D5 fallback is used (mirrors the
+// rive-react-native RiveRef API so useChesterAnimations drives it unchanged).
 const RIVE_ENABLED = false;
 // When enabling Rive, uncomment the line below and set RIVE_ENABLED = true:
 // import Rive from 'rive-react-native';
@@ -31,8 +33,12 @@ interface Props {
   chester: ChesterState;
   size?: 'small' | 'medium' | 'large';
   showInfo?: boolean;
-  /** Pass the riveRef from useChesterAnimations() when RIVE_ENABLED = true */
-  riveRef?: React.RefObject<RiveRef | null>;
+  /**
+   * Pass the riveRef from useChesterAnimations(). When RIVE_ENABLED = true the
+   * real Rive component receives it; when false, ChesterAvatar2D5 receives it
+   * via a structurally compatible imperative API (fireState/setInputState/reset).
+   */
+  riveRef?: React.RefObject<RiveRef | null> | React.RefObject<Chester2D5Ref | null>;
 }
 
 const MOOD_LABELS: Record<ChesterState['mood'], string> = {
@@ -135,11 +141,11 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
           backgroundColor: containerBg,
         }]}>
 
-          {/* ── Chester body — PNG or Rive ───────────────────────────────── */}
+          {/* ── Chester body — Rive (when enabled) or 2.5D code fallback ──── */}
           {RIVE_ENABLED ? (
             // Full Rive animation — uncomment Rive import at top to activate
             // <Rive
-            //   ref={riveRef}
+            //   ref={riveRef as React.RefObject<RiveRef | null>}
             //   source={CHESTER_RIV}
             //   artboardName="ChesterArtboard"
             //   stateMachineName="ChesterStateMachine"
@@ -147,12 +153,13 @@ export default function ChesterAvatar({ chester, size = 'medium', showInfo = tru
             // />
             null
           ) : (
-            <Image
-              source={MOOD_IMAGES[chester.mood]}
-              style={[styles.chesterImage, { width: imageSize, height: imageSize, opacity: imageOpacity }]}
-              resizeMode="cover"
-              accessibilityLabel="Chester the dog"
-            />
+            <View style={{ opacity: imageOpacity }}>
+              <ChesterAvatar2D5
+                ref={riveRef as React.Ref<Chester2D5Ref>}
+                mood={chester.mood}
+                size={imageSize}
+              />
+            </View>
           )}
 
           {/* Sleepy 💤 overlay */}
