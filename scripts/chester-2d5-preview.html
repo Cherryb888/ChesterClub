@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chester 2.5D Animation Preview</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #161a22;
+      --panel-2: #1f2430;
+      --text: #e6e8ee;
+      --muted: #9aa3b2;
+      --accent: #7cc4ff;
+      --accent-2: #ffd166;
+      --danger: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; }
+    .app { display: grid; grid-template-columns: 1fr 320px; gap: 16px; padding: 16px; height: 100%; }
+    @media (max-width: 880px) { .app { grid-template-columns: 1fr; } }
+    .stage {
+      background: radial-gradient(ellipse at center, #20283a 0%, #0c0f15 70%);
+      border-radius: 16px; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative;
+    }
+    .stage-meta { position: absolute; left: 12px; top: 12px; color: var(--muted); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .panel { background: var(--panel); border-radius: 16px; padding: 14px; overflow: auto; }
+    .panel h2 { margin: 4px 4px 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+    .group { background: var(--panel-2); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+    button {
+      width: 100%; text-align: left; background: #2a3142; color: var(--text);
+      border: 1px solid #313a4f; border-radius: 8px; padding: 8px 10px; margin: 4px 0;
+      cursor: pointer; font: inherit; transition: transform 80ms ease, background 120ms ease;
+    }
+    button:hover { background: #353d52; }
+    button:active { transform: scale(0.98); }
+    button.primary { background: #2c4a7a; border-color: #3a5e98; }
+    button.primary:hover { background: #335690; }
+    button.warn { background: #5a3a30; border-color: #7a4f42; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .row > * { flex: 1 1 calc(50% - 8px); }
+    select, input[type="range"] { width: 100%; background: #2a3142; color: var(--text); border: 1px solid #313a4f; border-radius: 8px; padding: 6px 8px; font: inherit; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted); padding-left: 6px; }
+    .footer { color: var(--muted); font-size: 11px; margin-top: 8px; padding: 0 4px; }
+
+    /* Chester scene */
+    .root {
+      width: 320px; height: 320px; position: relative;
+      display: flex; align-items: flex-end; justify-content: center;
+      overflow: visible;
+    }
+    .layer-bg {
+      position: absolute; left: 50%; bottom: 8%;
+      transform: translateX(-50%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .bg-inner {
+      background: rgba(120, 160, 200, 0.18);
+      border-radius: 999px;
+    }
+    .layer-shadow {
+      position: absolute; left: 50%; bottom: 6%;
+      background: rgba(0,0,0,0.55); border-radius: 999px;
+      transform: translateX(-50%);
+    }
+    .body-wrap {
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+    .body-img {
+      display: block;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+      filter: drop-shadow(0 8px 12px rgba(0,0,0,0.35));
+    }
+    .layer-sparkle {
+      position: absolute; left: 0; top: 5%; width: 100%; height: 40%;
+      pointer-events: none; will-change: transform, opacity;
+    }
+    .sparkle {
+      position: absolute; font-size: 22px; transform: translateX(-50%);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="stage">
+      <div class="stage-meta" id="metaText">idle · neutral</div>
+      <div class="root" id="root">
+        <!-- Layer 1: parallax background plane -->
+        <div class="layer-bg" id="bg">
+          <div class="bg-inner" id="bgInner"></div>
+        </div>
+        <!-- Layer 2: ground shadow -->
+        <div class="layer-shadow" id="shadow"></div>
+        <!-- Layer 3: Chester body -->
+        <div class="body-wrap" id="bodyWrap">
+          <img id="bodyImg" class="body-img" alt="Chester" />
+        </div>
+        <!-- Layer 4: sparkle overlay -->
+        <div class="layer-sparkle" id="sparkleLayer">
+          <span class="sparkle" style="left:20%">✨</span>
+          <span class="sparkle" style="left:50%">⭐</span>
+          <span class="sparkle" style="left:75%">✨</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Mood (ambient idle)</h2>
+      <div class="group">
+        <select id="moodSelect">
+          <option value="neutral">neutral</option>
+          <option value="sleepy">sleepy</option>
+          <option value="excited">excited</option>
+          <option value="sad">sad</option>
+          <option value="hungry">hungry</option>
+        </select>
+        <label>Size <span id="sizeVal" class="kbd">320</span></label>
+        <input id="sizeRange" type="range" min="160" max="480" step="10" value="320" />
+      </div>
+
+      <h2>fireState triggers</h2>
+      <div class="group">
+        <button data-fire="onFoodLogged">onFoodLogged <span class="kbd">bounce + wiggle</span></button>
+        <button data-fire="onMealScanned">onMealScanned <span class="kbd">wiggle + skew</span></button>
+        <button data-fire="onWaterLogged">onWaterLogged <span class="kbd">tilt + scale</span></button>
+        <button class="primary" data-fire="onLevelUp">onLevelUp <span class="kbd">big bounce + ✨</span></button>
+        <button class="primary" data-fire="onStreakMilestone">onStreakMilestone <span class="kbd">double bounce</span></button>
+        <button class="primary" data-fire="onAchievement">onAchievement <span class="kbd">pop + wiggle + ✨</span></button>
+        <button data-fire="onToyPlay">onToyPlay</button>
+      </div>
+
+      <h2>Dig sequence</h2>
+      <div class="group">
+        <button data-fire="onDigStart">onDigStart</button>
+        <button data-fire="onDigDeep">onDigDeep</button>
+        <button data-fire="onDigReveal">onDigReveal</button>
+      </div>
+
+      <h2>setInputState</h2>
+      <div class="group">
+        <button data-input="isSleeping">isSleeping</button>
+        <button data-input="isHungry">isHungry</button>
+        <button data-input="isExcited">isExcited</button>
+      </div>
+
+      <div class="group">
+        <button class="warn" id="resetBtn">reset</button>
+      </div>
+      <div class="footer">Mirrors timings/transforms in <span class="kbd">components/Chester/ChesterAvatar2D5.tsx</span></div>
+    </div>
+  </div>
+
+  <script>
+  // ---------- Animated value system mirroring react-native Animated ----------
+  // Each Animated value drives one or more "channels" combined into a transform string.
+
+  class AV {
+    constructor(initial = 0) {
+      this.value = initial;
+      this._listeners = new Set();
+      this._cancel = null; // cancels any in-flight tween
+    }
+    setValue(v) { this._stop(); this.value = v; this._emit(); }
+    addListener(fn) { this._listeners.add(fn); fn(this.value); return () => this._listeners.delete(fn); }
+    _emit() { for (const fn of this._listeners) fn(this.value); }
+    _stop() { if (this._cancel) { this._cancel(); this._cancel = null; } }
+    // timing: linear + custom easing fn (0..1)
+    timing({ toValue, duration = 250, easing = (t) => t }) {
+      return new Promise((resolve) => {
+        this._stop();
+        const from = this.value;
+        const start = performance.now();
+        let raf;
+        const step = (now) => {
+          const t = Math.min(1, (now - start) / duration);
+          this.value = from + (toValue - from) * easing(t);
+          this._emit();
+          if (t < 1) raf = requestAnimationFrame(step);
+          else { this._cancel = null; resolve(); }
+        };
+        this._cancel = () => { cancelAnimationFrame(raf); this._cancel = null; resolve(); };
+        raf = requestAnimationFrame(step);
+      });
+    }
+    // spring: critically-ish damped harmonic oscillator approximation
+    // tension/friction map ~ to RN Animated.spring (mass = 1).
+    spring({ toValue, tension = 180, friction = 7 }) {
+      return new Promise((resolve) => {
+        this._stop();
+        let v = 0; // velocity
+        let x = this.value;
+        let last = performance.now();
+        let raf;
+        const k = tension;
+        const c = friction;
+        const m = 1;
+        const step = (now) => {
+          let dt = (now - last) / 1000;
+          last = now;
+          if (dt > 1 / 30) dt = 1 / 30;
+          // sub-step for stability
+          const sub = 4;
+          const h = dt / sub;
+          for (let i = 0; i < sub; i++) {
+            const a = (-k * (x - toValue) - c * v) / m;
+            v += a * h;
+            x += v * h;
+          }
+          this.value = x;
+          this._emit();
+          const settled = Math.abs(v) < 0.01 && Math.abs(x - toValue) < 0.001;
+          if (settled) {
+            this.value = toValue; this._emit();
+            this._cancel = null; resolve();
+          } else {
+            raf = requestAnimationFrame(step);
+          }
+        };
+        this._cancel = () => { cancelAnimationFrame(raf); this._cancel = null; resolve(); };
+        raf = requestAnimationFrame(step);
+      });
+    }
+  }
+
+  // ---------- Easing ----------
+  const Easing = {
+    linear: (t) => t,
+    sin: (t) => 1 - Math.cos((t * Math.PI) / 2),
+    inOutSin: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+    inCubic: (t) => t * t * t,
+    outCubic: (t) => 1 - Math.pow(1 - t, 3),
+    outQuad: (t) => 1 - (1 - t) * (1 - t),
+  };
+
+  // ---------- Sequence / parallel / loop ----------
+  // Each "anim" is a function returning a Promise.
+  const seq = (...anims) => async () => { for (const a of anims) await a(); };
+  const par = (...anims) => () => Promise.all(anims.map((a) => a()));
+  const tim = (av, opts) => () => av.timing(opts);
+  const spr = (av, opts) => () => av.spring(opts);
+
+  function makeLoop(buildAnim, iterations = Infinity) {
+    let stopped = false;
+    const handle = { stop: () => { stopped = true; } };
+    (async () => {
+      let i = 0;
+      while (!stopped && i < iterations) {
+        await buildAnim()();
+        i++;
+      }
+    })();
+    return handle;
+  }
+
+  // ---------- Animated values ----------
+  const bodyY = new AV(0);
+  const bodyScale = new AV(1);
+  const bodyRot = new AV(0);          // -1..1 mapped to -8deg..8deg
+  const bodySkewX = new AV(0);        // -1..1 mapped to -10deg..10deg
+  const shadowScale = new AV(1);
+  const shadowOpacity = new AV(0.45);
+  const bgY = new AV(0);
+  const bgScale = new AV(1);
+  const ambient = new AV(0);          // 0..1
+  const sparkleOp = new AV(0);
+  const sparkleY = new AV(0);
+
+  // ---------- DOM refs ----------
+  const root = document.getElementById('root');
+  const bodyWrap = document.getElementById('bodyWrap');
+  const bodyImg = document.getElementById('bodyImg');
+  const shadow = document.getElementById('shadow');
+  const bg = document.getElementById('bg');
+  const bgInner = document.getElementById('bgInner');
+  const sparkleLayer = document.getElementById('sparkleLayer');
+  const meta = document.getElementById('metaText');
+
+  let SIZE = 320;
+  function applySize(s) {
+    SIZE = s;
+    root.style.width = s + 'px';
+    root.style.height = s + 'px';
+    bodyImg.style.width = s + 'px';
+    bodyImg.style.height = s * 0.75 + 'px';
+    bgInner.style.width = s * 1.1 + 'px';
+    bgInner.style.height = s * 0.6 + 'px';
+    shadow.style.width = s * 0.55 + 'px';
+    shadow.style.height = s * 0.12 + 'px';
+  }
+  applySize(SIZE);
+
+  // ---------- Frame swap ----------
+  const FRAMES = {
+    idle:    '../assets/chester/rive/chester-idle.png',
+    bending: '../assets/chester/rive/chester-bending-down.png',
+    digging: '../assets/chester/rive/chester-digging.png',
+    buried:  '../assets/chester/rive/chester-buried.png',
+    found:   '../assets/chester/rive/chester-found-bone.png',
+  };
+  let currentFrame = 'idle';
+  function setFrame(name) { currentFrame = name; bodyImg.src = FRAMES[name]; updateMeta(); }
+  setFrame('idle');
+
+  // ---------- Render loop: write transforms whenever values change ----------
+  function render() {
+    // ambient -> translateY [0..-4], rotateZ [-1deg..1deg]
+    const ambientY = ambient.value * -4;
+    const ambientRotDeg = -1 + ambient.value * 2;
+    const rotDeg = bodyRot.value * 8;
+    const skewDeg = bodySkewX.value * 10;
+    const ty = bodyY.value + ambientY;
+
+    bodyWrap.style.transform =
+      `perspective(800px) translateY(${ty}px) scale(${bodyScale.value}) ` +
+      `rotate(${rotDeg}deg) rotateZ(${ambientRotDeg}deg) skewX(${skewDeg}deg)`;
+
+    shadow.style.opacity = shadowOpacity.value;
+    shadow.style.transform = `translateX(-50%) scale(${shadowScale.value})`;
+
+    bg.style.transform = `translateX(-50%) translateY(${bgY.value}px) scale(${bgScale.value})`;
+
+    sparkleLayer.style.opacity = sparkleOp.value;
+    sparkleLayer.style.transform = `translateY(${sparkleY.value}px)`;
+  }
+  // hook a single render to all values
+  for (const av of [bodyY, bodyScale, bodyRot, bodySkewX, shadowScale, shadowOpacity, bgY, bgScale, ambient, sparkleOp, sparkleY]) {
+    av.addListener(render);
+  }
+  render();
+
+  // ---------- Spring presets ----------
+  const SPRING_BOUNCE = { tension: 180, friction: 7 };
+  const SPRING_SOFT   = { tension: 90,  friction: 10 };
+
+  // ---------- Choreography (matches ChesterAvatar2D5.tsx) ----------
+  const pop = (peak = 1.12, dur = 180) => seq(
+    par(
+      tim(bodyScale, { toValue: peak, duration: dur }),
+      tim(shadowScale, { toValue: 0.7, duration: dur }),
+      tim(shadowOpacity, { toValue: 0.25, duration: dur }),
+    ),
+    par(
+      spr(bodyScale, { toValue: 1, ...SPRING_BOUNCE }),
+      spr(shadowScale, { toValue: 1, ...SPRING_BOUNCE }),
+      tim(shadowOpacity, { toValue: 0.45, duration: 200 }),
+    ),
+  );
+
+  const bounce = (height = 26) => seq(
+    par(
+      tim(bodyScale, { toValue: 0.94, duration: 100 }),
+      tim(shadowScale, { toValue: 1.1, duration: 100 }),
+    ),
+    par(
+      tim(bodyY, { toValue: -height, duration: 220, easing: Easing.outCubic }),
+      tim(bodyScale, { toValue: 1.06, duration: 220 }),
+      tim(shadowScale, { toValue: 0.6, duration: 220 }),
+      tim(shadowOpacity, { toValue: 0.2, duration: 220 }),
+      tim(bgY, { toValue: 4, duration: 220 }),
+    ),
+    par(
+      tim(bodyY, { toValue: 0, duration: 180, easing: Easing.inCubic }),
+      tim(bodyScale, { toValue: 1.04, duration: 180 }),
+      tim(shadowScale, { toValue: 1.15, duration: 180 }),
+      tim(shadowOpacity, { toValue: 0.55, duration: 180 }),
+      tim(bgY, { toValue: 0, duration: 180 }),
+    ),
+    par(
+      spr(bodyScale, { toValue: 1, ...SPRING_BOUNCE }),
+      spr(shadowScale, { toValue: 1, ...SPRING_BOUNCE }),
+      tim(shadowOpacity, { toValue: 0.45, duration: 200 }),
+    ),
+  );
+
+  const wiggle = (amp = 1) => seq(
+    tim(bodyRot, { toValue: amp, duration: 90 }),
+    tim(bodyRot, { toValue: -amp, duration: 120 }),
+    tim(bodyRot, { toValue: amp * 0.6, duration: 100 }),
+    spr(bodyRot, { toValue: 0, ...SPRING_SOFT }),
+  );
+
+  const sparkleBurst = () => seq(
+    par(
+      tim(sparkleOp, { toValue: 1, duration: 120 }),
+      tim(sparkleY, { toValue: -28, duration: 600, easing: Easing.outQuad }),
+    ),
+    tim(sparkleOp, { toValue: 0, duration: 250 }),
+  );
+
+  // ---------- Idle bob loop tied to mood ----------
+  let mood = 'neutral';
+  let idleHandle = null;
+  function startIdle() {
+    if (idleHandle) idleHandle.stop();
+    const intensity =
+      mood === 'sleepy' ? 0.4 :
+      mood === 'excited' ? 1.4 :
+      (mood === 'sad' || mood === 'hungry') ? 0.7 : 1;
+    idleHandle = makeLoop(() => seq(
+      tim(ambient, { toValue: 1, duration: 1400 / intensity, easing: Easing.inOutSin }),
+      tim(ambient, { toValue: 0, duration: 1400 / intensity, easing: Easing.inOutSin }),
+    ));
+  }
+  startIdle();
+
+  // ---------- Dig timer ----------
+  let digTimer = null;
+  function clearDigTimer() { if (digTimer) { clearInterval(digTimer); digTimer = null; } }
+
+  // ---------- fireMap ----------
+  const fireMap = {
+    onFoodLogged: () => seq(bounce(22), wiggle(0.5))(),
+    onMealScanned: () => seq(
+      wiggle(0.8),
+      tim(bodySkewX, { toValue: 0.08, duration: 120 }),
+      tim(bodySkewX, { toValue: -0.08, duration: 140 }),
+      spr(bodySkewX, { toValue: 0, ...SPRING_SOFT }),
+    )(),
+    onWaterLogged: () => seq(
+      tim(bodyRot, { toValue: -0.8, duration: 220 }),
+      tim(bodyScale, { toValue: 1.05, duration: 200 }),
+      par(
+        spr(bodyRot, { toValue: 0, ...SPRING_BOUNCE }),
+        spr(bodyScale, { toValue: 1, ...SPRING_BOUNCE }),
+      ),
+    )(),
+    onLevelUp: () => par(bounce(50), sparkleBurst())(),
+    onStreakMilestone: () => par(
+      seq(bounce(18), bounce(18)),
+      sparkleBurst(),
+    )(),
+    onAchievement: () => par(pop(1.18, 220), wiggle(1.0), sparkleBurst())(),
+    onDigStart: () => {
+      setFrame('bending');
+      const sequence = ['bending', 'digging', 'buried', 'digging', 'buried', 'digging'];
+      let i = 0;
+      clearDigTimer();
+      digTimer = setInterval(() => {
+        setFrame(sequence[i % sequence.length]);
+        i++;
+        if (i >= sequence.length) clearDigTimer();
+      }, 320);
+      makeLoop(() => seq(
+        tim(bodyRot, { toValue: 0.4, duration: 160 }),
+        tim(bodyRot, { toValue: -0.4, duration: 160 }),
+      ), 5);
+    },
+    onDigDeep: () => {
+      setFrame('buried');
+      bodyY.timing({ toValue: 6, duration: 200 });
+    },
+    onDigReveal: () => {
+      clearDigTimer();
+      setFrame('found');
+      par(pop(1.2, 200), sparkleBurst())();
+      bodyY.spring({ toValue: 0, ...SPRING_BOUNCE });
+    },
+    onToyPlay: () => seq(wiggle(0.7), bounce(14), wiggle(0.5))(),
+  };
+
+  const inputMap = {
+    isSleeping: () => seq(
+      tim(bodyScale, { toValue: 1.05, duration: 600 }),
+      spr(bodyScale, { toValue: 1, ...SPRING_SOFT }),
+    )(),
+    isHungry: () => makeLoop(() => wiggle(0.4), 2),
+    isExcited: () => fireMap.onFoodLogged(),
+  };
+
+  // ---------- Reset ----------
+  function reset() {
+    clearDigTimer();
+    bodyY.setValue(0); bodyScale.setValue(1); bodyRot.setValue(0); bodySkewX.setValue(0);
+    shadowScale.setValue(1); shadowOpacity.setValue(0.45);
+    bgY.setValue(0); bgScale.setValue(1);
+    sparkleOp.setValue(0); sparkleY.setValue(0);
+    setFrame('idle');
+  }
+
+  function updateMeta() { meta.textContent = `${currentFrame} · ${mood}`; }
+
+  // ---------- UI wiring ----------
+  document.querySelectorAll('button[data-fire]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-fire');
+      fireMap[name]?.();
+    });
+  });
+  document.querySelectorAll('button[data-input]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-input');
+      inputMap[name]?.();
+    });
+  });
+  document.getElementById('resetBtn').addEventListener('click', reset);
+  document.getElementById('moodSelect').addEventListener('change', (e) => {
+    mood = e.target.value;
+    updateMeta();
+    startIdle();
+  });
+  const sizeRange = document.getElementById('sizeRange');
+  const sizeVal = document.getElementById('sizeVal');
+  sizeRange.addEventListener('input', () => {
+    const v = parseInt(sizeRange.value, 10);
+    sizeVal.textContent = String(v);
+    applySize(v);
+  });
+
+  // Keyboard quickfire
+  const keyMap = {
+    '1': 'onFoodLogged', '2': 'onMealScanned', '3': 'onWaterLogged',
+    '4': 'onLevelUp',    '5': 'onStreakMilestone', '6': 'onAchievement',
+    '7': 'onToyPlay',    'q': 'onDigStart', 'w': 'onDigDeep', 'e': 'onDigReveal',
+  };
+  window.addEventListener('keydown', (ev) => {
+    if (ev.target.matches('input,select,textarea')) return;
+    if (ev.key === 'r') reset();
+    const f = keyMap[ev.key];
+    if (f) fireMap[f]?.();
+  });
+  </script>
+</body>
+</html>
